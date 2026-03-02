@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Environment — API keys live here, never commit
+.env
+
+# Project thinking — stays local
+docs/
+
+# Content — user's personal workspace
+content/
+
+# System
+.DS_Store
