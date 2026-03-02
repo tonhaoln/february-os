@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 interface AIPanelProps {
   onClose: () => void
   activeFile: string | null
+  onContextUpdated: () => void
 }
 
 interface Message {
@@ -11,14 +12,18 @@ interface Message {
 }
 
 
-export default function AIPanel({ onClose, activeFile }: AIPanelProps) {
+export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPanelProps) {
   const [hasKey, setHasKey] = useState<boolean | null>(null)
   const [provider, setProvider] = useState<'anthropic' | 'openai'>('anthropic')
   const [keyInput, setKeyInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [exchangeCount, setExchangeCount] = useState(0)
+  const [contextState, setContextState] = useState<null | 'loading' | 'review'>(null)
+  const [contextDiff, setContextDiff] = useState<{ current: string; suggested: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const contextPromptRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/keys')
@@ -29,6 +34,14 @@ export default function AIPanel({ onClose, activeFile }: AIPanelProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (exchangeCount >= 3 && contextState === null) {
+      setTimeout(() => {
+        contextPromptRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 50)
+    }
+  }, [exchangeCount, contextState])
 
   async function saveKey(e: React.FormEvent) {
     e.preventDefault()
@@ -83,7 +96,61 @@ export default function AIPanel({ onClose, activeFile }: AIPanelProps) {
       })
     } finally {
       setIsLoading(false)
+      setExchangeCount(c => c + 1)
     }
+  }
+
+  async function suggestContextUpdate() {
+    setContextState('loading')
+    try {
+      const res = await fetch('/api/context-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages }),
+      })
+      const data = await res.json()
+      setContextDiff({ current: data.current, suggested: data.suggested })
+      setContextState('review')
+    } catch {
+      setContextState(null)
+    }
+  }
+
+  async function approveContextUpdate() {
+    if (!contextDiff) return
+    await fetch('/api/files/CONTEXT.md', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: contextDiff.suggested }),
+    })
+    setContextState(null)
+    setContextDiff(null)
+    setExchangeCount(0)
+    onContextUpdated()
+  }
+
+  function dismissContextUpdate() {
+    setContextState(null)
+    setContextDiff(null)
+    setExchangeCount(0)
+  }
+
+  function computeDiff(current: string, suggested: string) {
+    const currentLines = current.split('\n')
+    const suggestedLines = suggested.split('\n')
+    const result: { text: string; type: 'added' | 'removed' | 'unchanged' }[] = []
+    const maxLen = Math.max(currentLines.length, suggestedLines.length)
+    for (let i = 0; i < maxLen; i++) {
+      const cur = currentLines[i]
+      const sug = suggestedLines[i]
+      if (cur === sug) {
+        result.push({ text: cur ?? '', type: 'unchanged' })
+      } else {
+        if (cur !== undefined) result.push({ text: cur, type: 'removed' })
+        if (sug !== undefined) result.push({ text: sug, type: 'added' })
+      }
+    }
+    return result
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -169,8 +236,67 @@ export default function AIPanel({ onClose, activeFile }: AIPanelProps) {
                 <div className="text-neutral-600 text-sm px-1">…</div>
               </div>
             )}
+            {exchangeCount >= 3 && contextState === null && !isLoading && (
+              <div ref={contextPromptRef} className="flex flex-col items-center gap-1.5 pt-1 pb-4">
+                <button
+                  onClick={suggestContextUpdate}
+                  className="text-xs text-neutral-500 hover:text-neutral-300 border border-neutral-800 hover:border-neutral-600 rounded px-3 py-1.5 transition-colors"
+                >
+                  Update your context?
+                </button>
+                <p className="text-xs text-neutral-700 text-center leading-relaxed">
+                  After a few exchanges, February can suggest<br />updates to keep your context current.
+                </p>
+              </div>
+            )}
+            {contextState === 'loading' && (
+              <div className="flex justify-center pt-1">
+                <p className="text-xs text-neutral-600">Reviewing your context…</p>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
+
+          {contextState === 'review' && contextDiff !== null && (
+            <div className="border-t border-neutral-800 flex flex-col">
+              <div className="px-4 py-2 flex items-center justify-between">
+                <span className="text-xs text-neutral-400 font-medium">Context update</span>
+                <div className="flex gap-3">
+                  <button
+                    onClick={approveContextUpdate}
+                    className="text-xs text-green-500 hover:text-green-400 transition-colors"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={dismissContextUpdate}
+                    className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-y-auto max-h-48 px-4 pb-3">
+                <div className="font-mono text-xs leading-5 rounded overflow-hidden">
+                  {computeDiff(contextDiff.current, contextDiff.suggested).map((line, i) => (
+                    <div
+                      key={i}
+                      className={
+                        line.type === 'added'
+                          ? 'bg-green-950 text-green-300 px-2'
+                          : line.type === 'removed'
+                          ? 'bg-red-950 text-red-400 px-2 line-through opacity-60'
+                          : 'text-neutral-500 px-2'
+                      }
+                    >
+                      {line.type === 'added' ? '+ ' : line.type === 'removed' ? '− ' : '  '}
+                      {line.text || ' '}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="px-3 pb-3 pt-2 border-t border-neutral-800 flex gap-2">
             <input

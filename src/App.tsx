@@ -91,6 +91,7 @@ export default function App() {
         <AIPanel
           onClose={() => setAiPanelOpen(false)}
           activeFile={activeFile}
+          onContextUpdated={() => { if (activeFile === 'CONTEXT.md') openFile('CONTEXT.md') }}
         />
       )}
     </div>

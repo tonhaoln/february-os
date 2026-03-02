@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import simpleGit from 'simple-git'
-import { streamText } from 'ai'
+import { streamText, generateText } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { openai } from '@ai-sdk/openai'
 
@@ -192,7 +192,10 @@ app.post('/api/chat', async (req, res) => {
       const content = fs.readFileSync(path.join(CONTENT_DIR, f), 'utf-8')
       return `## ${f}\n\n${content}`
     })
-  const system = systemParts.join('\n\n---\n\n')
+  const system = [
+    'You have access to the following files from the user\'s workspace. Answer questions using this content directly — do not say you cannot read files.',
+    ...systemParts,
+  ].join('\n\n---\n\n')
 
   const model = process.env.ANTHROPIC_API_KEY
     ? anthropic('claude-sonnet-4-6')
@@ -207,6 +210,30 @@ app.post('/api/chat', async (req, res) => {
     }
     res.end()
   } catch (err) {
+    res.status(500).json({ error: 'AI request failed' })
+  }
+})
+
+// --- Context suggest route ---
+
+app.post('/api/context-suggest', async (req, res) => {
+  const { messages } = req.body
+  const current = fs.existsSync(CONTEXT_FILE) ? fs.readFileSync(CONTEXT_FILE, 'utf-8') : ''
+
+  const model = process.env.ANTHROPIC_API_KEY
+    ? anthropic('claude-sonnet-4-6')
+    : openai('gpt-4o')
+
+  const conversationText = (messages as { role: string; content: string }[])
+    .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+    .join('\n\n')
+
+  const prompt = `Here is the user's current CONTEXT.md:\n\n${current}\n\n---\n\nHere is a recent conversation:\n\n${conversationText}\n\n---\n\nSuggest an updated version of CONTEXT.md that captures anything new and useful from the conversation. Return only the full updated file content — no explanation, no markdown wrapper, no code fences.`
+
+  try {
+    const result = await generateText({ model, prompt })
+    res.json({ current, suggested: result.text })
+  } catch {
     res.status(500).json({ error: 'AI request failed' })
   }
 })
