@@ -41,7 +41,7 @@ export default function Sidebar({
               onClick={() => onOpenFile('CONTEXT.md')}
               className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors group ${
                 activeFile === 'CONTEXT.md'
-                  ? 'bg-neutral-800 text-neutral-100'
+                  ? 'bg-neutral-800'
                   : 'hover:bg-neutral-800 text-neutral-300 hover:text-neutral-100'
               }`}
             >
@@ -49,7 +49,7 @@ export default function Sidebar({
                 <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.2"/>
                 <path d="M4 5h6M4 7h6M4 9h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
               </svg>
-              <span className="text-sm">Your context</span>
+              <span className="text-sm" style={{ color: activeFile === 'CONTEXT.md' ? '#b685ff' : undefined }}>Your context</span>
             </button>
           </div>
 
@@ -69,7 +69,8 @@ export default function Sidebar({
                     }`}>
                       <button
                         onClick={() => onOpenFile(file)}
-                        className="flex-1 px-2 py-1.5 text-left text-sm text-neutral-300 group-hover:text-neutral-100 truncate"
+                        className="flex-1 px-2 py-1.5 text-left text-sm truncate"
+                        style={{ color: activeFile === file ? '#b685ff' : undefined }}
                       >
                         {stripMd(file)}
                       </button>

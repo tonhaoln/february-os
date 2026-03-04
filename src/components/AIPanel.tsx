@@ -229,7 +229,7 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
             onClick={() => setShowProviderMenu(v => !v)}
             className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors group"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#b685ff' }} />
             <span>{provider === 'anthropic' ? 'Claude' : 'OpenAI'}</span>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-neutral-600 group-hover:text-neutral-400 transition-colors">
               <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -359,7 +359,8 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
               <div ref={contextPromptRef} className="flex flex-col items-center gap-1.5 pt-1 pb-4">
                 <button
                   onClick={suggestContextUpdate}
-                  className="text-xs text-neutral-500 hover:text-neutral-300 border border-neutral-800 hover:border-neutral-600 rounded px-3 py-1.5 transition-colors"
+                  className="text-xs border rounded px-3 py-1.5 transition-colors"
+                  style={{ color: '#b685ff', borderColor: '#b685ff44' }}
                 >
                   Update your context?
                 </button>
