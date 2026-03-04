@@ -439,8 +439,8 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
             </button>
           </div>
 
-          <div className="px-4 py-2 border-t border-neutral-800">
-            <p className="text-xs text-neutral-600">
+          <div className="px-3 pb-3 pt-2 border-t border-neutral-800">
+            <p className="text-xs text-neutral-600 px-2 py-1.5">
               <span className="text-neutral-500">Your context</span> — always included
               {activeFile && activeFile !== 'CONTEXT.md' && (
                 <span> · {activeFile.replace(/\.md$/, '')}</span>
