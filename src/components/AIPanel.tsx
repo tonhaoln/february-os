@@ -7,15 +7,19 @@ interface AIPanelProps {
 }
 
 interface Message {
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'divider'
   content: string
 }
 
-
 export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPanelProps) {
   const [hasKey, setHasKey] = useState<boolean | null>(null)
+  const [hasAnthropic, setHasAnthropic] = useState(false)
+  const [hasOpenAI, setHasOpenAI] = useState(false)
   const [provider, setProvider] = useState<'anthropic' | 'openai'>('anthropic')
   const [keyInput, setKeyInput] = useState('')
+  const [showProviderMenu, setShowProviderMenu] = useState(false)
+  const [addingFor, setAddingFor] = useState<'anthropic' | 'openai' | null>(null)
+  const [addKeyInput, setAddKeyInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -24,11 +28,17 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
   const [contextDiff, setContextDiff] = useState<{ current: string; suggested: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const contextPromptRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/keys')
       .then(r => r.json())
-      .then(d => setHasKey(d.hasKey))
+      .then(d => {
+        setHasKey(d.hasKey)
+        setHasAnthropic(d.hasAnthropic)
+        setHasOpenAI(d.hasOpenAI)
+        if (d.provider) setProvider(d.provider)
+      })
   }, [])
 
   useEffect(() => {
@@ -43,6 +53,18 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
     }
   }, [exchangeCount, contextState])
 
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowProviderMenu(false)
+        setAddingFor(null)
+        setAddKeyInput('')
+      }
+    }
+    if (showProviderMenu) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showProviderMenu])
+
   async function saveKey(e: React.FormEvent) {
     e.preventDefault()
     if (!keyInput.trim()) return
@@ -51,8 +73,36 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key: keyInput.trim(), provider }),
     })
+    if (provider === 'anthropic') setHasAnthropic(true)
+    else setHasOpenAI(true)
     setHasKey(true)
     setKeyInput('')
+  }
+
+  async function saveAdditionalKey(e: React.FormEvent) {
+    e.preventDefault()
+    if (!addKeyInput.trim() || !addingFor) return
+    await fetch('/api/keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: addKeyInput.trim(), provider: addingFor }),
+    })
+    if (addingFor === 'anthropic') setHasAnthropic(true)
+    else setHasOpenAI(true)
+    switchProvider(addingFor)
+    setAddKeyInput('')
+    setAddingFor(null)
+  }
+
+  function switchProvider(p: 'anthropic' | 'openai') {
+    if (messages.length > 0) {
+      setMessages(msgs => [...msgs, {
+        role: 'divider',
+        content: p === 'anthropic' ? 'Claude' : 'OpenAI',
+      }])
+    }
+    setProvider(p)
+    setShowProviderMenu(false)
   }
 
   async function send() {
@@ -70,10 +120,11 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
 
     try {
       const filenames = activeFile && activeFile !== 'CONTEXT.md' ? [activeFile] : []
+      const apiMessages = newMessages.filter(m => m.role !== 'divider')
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, filenames }),
+        body: JSON.stringify({ messages: apiMessages, filenames, provider }),
       })
 
       const reader = res.body!.getReader()
@@ -106,7 +157,7 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
       const res = await fetch('/api/context-suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages: messages.filter(m => m.role !== 'divider'), provider }),
       })
       const data = await res.json()
       setContextDiff({ current: data.current, suggested: data.suggested })
@@ -163,18 +214,86 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
   return (
     <aside className="w-80 flex-shrink-0 flex flex-col border-l border-neutral-800 bg-neutral-950">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
-        <span className="text-sm font-medium text-neutral-200">Ask AI</span>
+      <div className="flex items-center px-4 h-11 flex-shrink-0 border-b border-neutral-800 gap-2">
         <button
           onClick={onClose}
-          className="text-neutral-500 hover:text-neutral-300 transition-colors"
-          aria-label="Close AI panel"
+          className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200 transition-colors flex-1"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
+          Ask AI
         </button>
+        {hasKey && (
+          <button
+            onClick={() => setShowProviderMenu(v => !v)}
+            className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors group"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+            <span>{provider === 'anthropic' ? 'Claude' : 'OpenAI'}</span>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-neutral-600 group-hover:text-neutral-400 transition-colors">
+              <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
       </div>
+
+      {/* Provider menu */}
+      {showProviderMenu && (
+        <div ref={menuRef} className="border-b border-neutral-800 px-4 py-3 space-y-1">
+          {/* Anthropic row */}
+          {provider === 'anthropic' ? (
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <span className="text-neutral-300">Claude</span>
+              <span className="text-neutral-600">active</span>
+            </div>
+          ) : hasAnthropic ? (
+            <button onClick={() => switchProvider('anthropic')}
+              className="w-full flex items-center text-xs text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 rounded px-2 py-1 transition-colors">
+              Claude
+            </button>
+          ) : addingFor !== 'anthropic' ? (
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <span className="text-neutral-600">Claude</span>
+              <button onClick={() => setAddingFor('anthropic')}
+                className="text-neutral-600 hover:text-neutral-400 transition-colors">add key</button>
+            </div>
+          ) : null}
+          {/* OpenAI row */}
+          {provider === 'openai' ? (
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <span className="text-neutral-300">OpenAI</span>
+              <span className="text-neutral-600">active</span>
+            </div>
+          ) : hasOpenAI ? (
+            <button onClick={() => switchProvider('openai')}
+              className="w-full flex items-center text-xs text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 rounded px-2 py-1 transition-colors">
+              OpenAI
+            </button>
+          ) : addingFor !== 'openai' ? (
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <span className="text-neutral-600">OpenAI</span>
+              <button onClick={() => setAddingFor('openai')}
+                className="text-neutral-600 hover:text-neutral-400 transition-colors">add key</button>
+            </div>
+          ) : null}
+          {addingFor && (
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 pt-1">
+              <input
+                type="password"
+                value={addKeyInput}
+                onChange={e => setAddKeyInput(e.target.value)}
+                placeholder={addingFor === 'anthropic' ? 'sk-ant-…' : 'sk-…'}
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+              />
+              <button type="submit" disabled={!addKeyInput.trim()}
+                className="text-xs px-2 py-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                Save
+              </button>
+            </form>
+          )}
+        </div>
+      )}
 
       {hasKey === null ? (
         <div className="flex-1 flex items-center justify-center">
@@ -183,22 +302,6 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
       ) : !hasKey ? (
         <form onSubmit={saveKey} className="flex-1 flex flex-col justify-center px-6 gap-4">
           <p className="text-sm text-neutral-300">Add your API key to start.</p>
-          <div className="flex gap-2">
-            {(['anthropic', 'openai'] as const).map(p => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setProvider(p)}
-                className={`flex-1 py-1.5 rounded text-xs transition-colors ${
-                  provider === p
-                    ? 'bg-neutral-700 text-neutral-100'
-                    : 'bg-neutral-900 text-neutral-500 hover:text-neutral-300'
-                }`}
-              >
-                {p === 'anthropic' ? 'Anthropic' : 'OpenAI'}
-              </button>
-            ))}
-          </div>
           <input
             type="password"
             value={keyInput}
@@ -213,6 +316,13 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
           >
             Save key
           </button>
+          <button
+            type="button"
+            onClick={() => setProvider(p => p === 'anthropic' ? 'openai' : 'anthropic')}
+            className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors -mt-2"
+          >
+            {provider === 'anthropic' ? 'Using OpenAI instead?' : 'Using Anthropic instead?'}
+          </button>
         </form>
       ) : (
         <>
@@ -222,15 +332,24 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
                 Ask anything about your open page.
               </p>
             )}
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
-                  m.role === 'user' ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-300'
-                }`}>
-                  {m.content}
+            {messages.map((m, i) => {
+              if (m.role === 'divider') return (
+                <div key={i} className="flex items-center gap-2 py-1">
+                  <div className="flex-1 h-px bg-neutral-800" />
+                  <span className="text-xs text-neutral-600">{m.content}</span>
+                  <div className="flex-1 h-px bg-neutral-800" />
                 </div>
-              </div>
-            ))}
+              )
+              return (
+                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
+                    m.role === 'user' ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-300'
+                  }`}>
+                    {m.content}
+                  </div>
+                </div>
+              )
+            })}
             {isLoading && messages[messages.length - 1]?.content === '' && (
               <div className="flex justify-start">
                 <div className="text-neutral-600 text-sm px-1">…</div>

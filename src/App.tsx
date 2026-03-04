@@ -82,6 +82,7 @@ export default function App() {
       />
       <Canvas
         onOpenAI={() => setAiPanelOpen(o => !o)}
+        aiPanelOpen={aiPanelOpen}
         filename={activeFile}
         content={activeContent}
         onSave={saveFile}

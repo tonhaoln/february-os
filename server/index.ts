@@ -167,7 +167,7 @@ app.get('/api/keys', (_req, res) => {
   const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
   const hasOpenAI = !!process.env.OPENAI_API_KEY
   const provider = hasAnthropic ? 'anthropic' : hasOpenAI ? 'openai' : null
-  res.json({ hasKey: !!provider, provider })
+  res.json({ hasKey: !!provider, provider, hasAnthropic, hasOpenAI })
 })
 
 app.post('/api/keys', (req, res) => {
@@ -180,7 +180,7 @@ app.post('/api/keys', (req, res) => {
 // --- Chat route ---
 
 app.post('/api/chat', async (req, res) => {
-  const { messages, filenames } = req.body
+  const { messages, filenames, provider: requestedProvider } = req.body
 
   const fileList: string[] = ['CONTEXT.md', ...(filenames ?? [])].filter(
     (f, i, arr) => arr.indexOf(f) === i // dedupe
@@ -197,9 +197,12 @@ app.post('/api/chat', async (req, res) => {
     ...systemParts,
   ].join('\n\n---\n\n')
 
-  const model = process.env.ANTHROPIC_API_KEY
-    ? anthropic('claude-sonnet-4-6')
-    : openai('gpt-4o')
+  const useAnthropic = requestedProvider === 'anthropic'
+    ? !!process.env.ANTHROPIC_API_KEY
+    : requestedProvider === 'openai'
+    ? false
+    : !!process.env.ANTHROPIC_API_KEY
+  const model = useAnthropic ? anthropic('claude-sonnet-4-6') : openai('gpt-4o')
 
   try {
     const result = streamText({ model, system, messages })
@@ -217,12 +220,15 @@ app.post('/api/chat', async (req, res) => {
 // --- Context suggest route ---
 
 app.post('/api/context-suggest', async (req, res) => {
-  const { messages } = req.body
+  const { messages, provider: requestedProvider } = req.body
   const current = fs.existsSync(CONTEXT_FILE) ? fs.readFileSync(CONTEXT_FILE, 'utf-8') : ''
 
-  const model = process.env.ANTHROPIC_API_KEY
-    ? anthropic('claude-sonnet-4-6')
-    : openai('gpt-4o')
+  const useAnthropic = requestedProvider === 'anthropic'
+    ? !!process.env.ANTHROPIC_API_KEY
+    : requestedProvider === 'openai'
+    ? false
+    : !!process.env.ANTHROPIC_API_KEY
+  const model = useAnthropic ? anthropic('claude-sonnet-4-6') : openai('gpt-4o')
 
   const conversationText = (messages as { role: string; content: string }[])
     .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)

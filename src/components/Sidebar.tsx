@@ -22,7 +22,7 @@ export default function Sidebar({
       {open && (
         <aside className="w-60 flex-shrink-0 flex flex-col border-r border-neutral-800 bg-neutral-950">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+          <div className="flex items-center justify-between px-4 h-11 flex-shrink-0 border-b border-neutral-800">
             <span className="text-sm font-medium text-neutral-200">February</span>
             <button
               onClick={onToggle}

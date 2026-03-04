@@ -5,6 +5,7 @@ import { Markdown } from 'tiptap-markdown'
 
 interface CanvasProps {
   onOpenAI: () => void
+  aiPanelOpen: boolean
   filename: string | null
   content: string
   onSave: (content: string) => void
@@ -15,7 +16,7 @@ function stripMd(filename: string) {
   return filename.replace(/\.md$/, '')
 }
 
-export default function Canvas({ onOpenAI, filename, content, onSave, onRename }: CanvasProps) {
+export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSave, onRename }: CanvasProps) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [title, setTitle] = useState('')
 
@@ -61,7 +62,7 @@ export default function Canvas({ onOpenAI, filename, content, onSave, onRename }
   return (
     <main className="flex-1 flex flex-col overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-800">
+      <div className="flex items-center justify-between px-4 h-11 flex-shrink-0 border-b border-neutral-800">
         {filename && filename !== 'CONTEXT.md' ? (
           <input
             value={title}
@@ -76,16 +77,17 @@ export default function Canvas({ onOpenAI, filename, content, onSave, onRename }
             {filename === 'CONTEXT.md' ? 'Your context' : ''}
           </span>
         )}
-        <button
-          onClick={onOpenAI}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2"/>
-            <path d="M5 7h4M7 5v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-          </svg>
-          Ask AI
-        </button>
+        {!aiPanelOpen && (
+          <button
+            onClick={onOpenAI}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M10 4L6 8L10 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Ask AI
+          </button>
+        )}
       </div>
 
       {/* Writing area — full area is click target */}
