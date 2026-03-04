@@ -27,3 +27,10 @@ html, body, #root {
 .tiptap blockquote { @apply border-l-2 border-neutral-600 pl-4 text-neutral-400 italic; }
 .tiptap code { @apply font-mono text-sm bg-neutral-800 px-1 rounded text-neutral-300; }
 .tiptap .ProseMirror-focused { caret-color: #b685ff; }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
+*:hover::-webkit-scrollbar-thumb { background: #2a2a2a; }
+::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
