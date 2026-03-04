@@ -4,6 +4,8 @@ Your context shouldn't be locked inside a tool. It should be yours — versioned
 
 February is a local-first interface for externalising your context. Markdown files underneath, Git versioning silent, any AI can read them. Clone it, run one command, start writing. The model is interchangeable. The context stays yours.
 
+Not a RAG tool. You're not searching fragments — you're handing the AI a curated document it can actually read.
+
 ![February](screenshots/february.png)
 
 ---
@@ -33,7 +35,7 @@ Browser opens. Your workspace is ready. If it doesn't, go to `localhost:5173`.
 Optional. You can write and organise pages without one.
 
 With a key, the AI panel lets you ask questions scoped to your files.
-After a few exchanges, it suggests updates to your context — shows a diff, one click to commit.
+You're using the AI to refine your inputs, not just generate outputs. After a few exchanges, it suggests updates to your context — shows a diff, one click to commit.
 
 Get one at [console.anthropic.com](https://console.anthropic.com) or [platform.openai.com](https://platform.openai.com).
 Enter it on first use in the AI panel — stored locally in `.env`.
