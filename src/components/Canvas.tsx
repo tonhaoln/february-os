@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
 
@@ -96,6 +96,55 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
         onClick={() => editor?.commands.focus()}
       >
         <div className="max-w-[700px] mx-auto px-8 py-12 min-h-full">
+          {filename && editor && (
+            <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+              <div className="flex items-center bg-neutral-800 border border-neutral-700 rounded shadow-lg overflow-hidden">
+                <button
+                  onClick={() => editor.chain().focus().toggleBold().run()}
+                  className={`px-2.5 py-1.5 text-xs font-bold transition-colors ${editor.isActive('bold') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >B</button>
+                <button
+                  onClick={() => editor.chain().focus().toggleItalic().run()}
+                  className={`px-2.5 py-1.5 text-xs italic transition-colors ${editor.isActive('italic') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >I</button>
+                <button
+                  onClick={() => editor.chain().focus().toggleCode().run()}
+                  className={`px-2.5 py-1.5 text-xs font-mono transition-colors ${editor.isActive('code') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >&lt;/&gt;</button>
+                <div className="w-px h-4 bg-neutral-700 mx-0.5" />
+                <button
+                  onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                  className={`px-2.5 py-1.5 text-xs transition-colors ${editor.isActive('heading', { level: 2 }) ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >H2</button>
+                <button
+                  onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                  className={`px-2.5 py-1.5 text-xs transition-colors ${editor.isActive('heading', { level: 3 }) ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >H3</button>
+                <div className="w-px h-4 bg-neutral-700 mx-0.5" />
+                <button
+                  onClick={() => editor.chain().focus().toggleStrike().run()}
+                  className={`px-2.5 py-1.5 text-xs line-through transition-colors ${editor.isActive('strike') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >S</button>
+                <button
+                  onClick={() => editor.chain().focus().toggleBulletList().run()}
+                  className={`px-2.5 py-1.5 transition-colors ${editor.isActive('bulletList') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <circle cx="2" cy="4" r="1" fill="currentColor"/>
+                    <circle cx="2" cy="7" r="1" fill="currentColor"/>
+                    <circle cx="2" cy="10" r="1" fill="currentColor"/>
+                    <line x1="5" y1="4" x2="12" y2="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="5" y1="7" x2="12" y2="7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="5" y1="10" x2="12" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                  className={`px-2.5 py-1.5 text-xs transition-colors ${editor.isActive('blockquote') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                >"</button>
+              </div>
+            </BubbleMenu>
+          )}
           {filename ? (
             <EditorContent editor={editor} className="tiptap" />
           ) : (
