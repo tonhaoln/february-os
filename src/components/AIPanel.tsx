@@ -103,6 +103,20 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
     setAddingFor(null)
   }
 
+  async function removeKey(p: 'anthropic' | 'openai') {
+    await fetch(`/api/keys/${p}`, { method: 'DELETE' })
+    const newHasAnthropic = p === 'anthropic' ? false : hasAnthropic
+    const newHasOpenAI = p === 'openai' ? false : hasOpenAI
+    if (p === 'anthropic') setHasAnthropic(false)
+    else setHasOpenAI(false)
+    setHasKey(newHasAnthropic || newHasOpenAI)
+    if (provider === p) {
+      if (p === 'anthropic' && newHasOpenAI) setProvider('openai')
+      else if (p === 'openai' && newHasAnthropic) setProvider('anthropic')
+      else if (hasOllama) setProvider('ollama')
+    }
+  }
+
   function switchProvider(p: 'anthropic' | 'openai' | 'ollama') {
     if (messages.length > 0) {
       setMessages(msgs => [...msgs, {
@@ -255,46 +269,75 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
           {provider === 'anthropic' ? (
             <div className="flex items-center justify-between text-xs px-2 py-1">
               <span className="text-neutral-300">Claude</span>
-              <span className="text-neutral-600">active</span>
+              <button onClick={() => removeKey('anthropic')} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
             </div>
           ) : hasAnthropic ? (
-            <button onClick={() => switchProvider('anthropic')}
-              className="w-full flex items-center text-xs text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 rounded px-2 py-1 transition-colors">
-              Claude
-            </button>
+            <div onClick={() => switchProvider('anthropic')}
+              className="flex items-center justify-between text-xs px-2 py-1 hover:bg-neutral-900 rounded transition-colors cursor-pointer text-neutral-600 hover:text-neutral-300">
+              <span>Claude</span>
+              <button onClick={e => { e.stopPropagation(); removeKey('anthropic') }} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
+            </div>
           ) : addingFor !== 'anthropic' ? (
             <div className="flex items-center justify-between text-xs px-2 py-1">
               <span className="text-neutral-600">Claude</span>
               <button onClick={() => setAddingFor('anthropic')}
                 className="text-neutral-600 hover:text-neutral-400 transition-colors">add key</button>
             </div>
-          ) : null}
+          ) : (
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-2 py-1">
+              <input
+                type="password"
+                value={addKeyInput}
+                onChange={e => setAddKeyInput(e.target.value)}
+                placeholder="sk-ant-…"
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                autoFocus
+              />
+              <button type="submit" disabled={!addKeyInput.trim()}
+                className="text-xs px-2 py-1 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                Save
+              </button>
+            </form>
+          )}
           {/* OpenAI row */}
           {provider === 'openai' ? (
             <div className="flex items-center justify-between text-xs px-2 py-1">
               <span className="text-neutral-300">OpenAI</span>
-              <span className="text-neutral-600">active</span>
+              <button onClick={() => removeKey('openai')} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
             </div>
           ) : hasOpenAI ? (
-            <button onClick={() => switchProvider('openai')}
-              className="w-full flex items-center text-xs text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 rounded px-2 py-1 transition-colors">
-              OpenAI
-            </button>
+            <div onClick={() => switchProvider('openai')}
+              className="flex items-center justify-between text-xs px-2 py-1 hover:bg-neutral-900 rounded transition-colors cursor-pointer text-neutral-600 hover:text-neutral-300">
+              <span>OpenAI</span>
+              <button onClick={e => { e.stopPropagation(); removeKey('openai') }} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
+            </div>
           ) : addingFor !== 'openai' ? (
             <div className="flex items-center justify-between text-xs px-2 py-1">
               <span className="text-neutral-600">OpenAI</span>
               <button onClick={() => setAddingFor('openai')}
                 className="text-neutral-600 hover:text-neutral-400 transition-colors">add key</button>
             </div>
-          ) : null}
+          ) : (
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-2 py-1">
+              <input
+                type="password"
+                value={addKeyInput}
+                onChange={e => setAddKeyInput(e.target.value)}
+                placeholder="sk-…"
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                autoFocus
+              />
+              <button type="submit" disabled={!addKeyInput.trim()}
+                className="text-xs px-2 py-1 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                Save
+              </button>
+            </form>
+          )}
           {/* Ollama row */}
           {provider === 'ollama' ? (
             <div className="flex items-center justify-between text-xs px-2 py-1">
-              <div className="flex items-center gap-2">
-                <span className="text-neutral-300">Ollama</span>
-                {ollamaModels[0] && <span className="text-neutral-600">{ollamaModels[0]}</span>}
-              </div>
-              <span className="text-neutral-600">active</span>
+              <span className="text-neutral-300">Ollama</span>
+              {ollamaModels[0] && <span className="text-neutral-600">{ollamaModels[0]}</span>}
             </div>
           ) : hasOllama && ollamaModels.length > 0 ? (
             <button onClick={() => switchProvider('ollama')}
@@ -313,21 +356,6 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
               <a href="https://ollama.com" target="_blank" rel="noreferrer"
                 className="text-neutral-600 hover:text-neutral-400 transition-colors">not running</a>
             </div>
-          )}
-          {addingFor && (
-            <form onSubmit={saveAdditionalKey} className="flex gap-2 pt-1">
-              <input
-                type="password"
-                value={addKeyInput}
-                onChange={e => setAddKeyInput(e.target.value)}
-                placeholder={addingFor === 'anthropic' ? 'sk-ant-…' : 'sk-…'}
-                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
-              />
-              <button type="submit" disabled={!addKeyInput.trim()}
-                className="text-xs px-2 py-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
-                Save
-              </button>
-            </form>
           )}
         </div>
       )}

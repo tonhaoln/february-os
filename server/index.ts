@@ -202,6 +202,16 @@ app.post('/api/keys', (req, res) => {
   res.json({ ok: true })
 })
 
+app.delete('/api/keys/:provider', (req, res) => {
+  const { provider } = req.params
+  const varName = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY'
+  let contents = fs.existsSync(ENV_FILE) ? fs.readFileSync(ENV_FILE, 'utf-8') : ''
+  contents = contents.replace(new RegExp(`^${varName}=.*\\n?`, 'm'), '')
+  fs.writeFileSync(ENV_FILE, contents, 'utf-8')
+  delete process.env[varName]
+  res.json({ ok: true })
+})
+
 // --- Chat route ---
 
 app.post('/api/chat', async (req, res) => {
