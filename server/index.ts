@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 import simpleGit from 'simple-git'
 import { streamText, generateText } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
-import { openai } from '@ai-sdk/openai'
+import { openai, createOpenAI } from '@ai-sdk/openai'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -96,6 +96,30 @@ function writeEnvKey(provider: string, key: string) {
   process.env[varName] = key
 }
 
+async function detectOllama(): Promise<{ available: boolean; models: string[] }> {
+  try {
+    const res = await fetch('http://localhost:11434/api/tags')
+    if (!res.ok) return { available: false, models: [] }
+    const data = await res.json() as { models?: { name: string }[] }
+    return { available: true, models: data.models?.map(m => m.name) ?? [] }
+  } catch {
+    return { available: false, models: [] }
+  }
+}
+
+function selectModel(requestedProvider: string, ollamaModel?: string) {
+  if (requestedProvider === 'ollama') {
+    const ollamaOpenAI = createOpenAI({ baseURL: 'http://localhost:11434/v1', apiKey: 'ollama' })
+    return ollamaOpenAI(ollamaModel ?? 'llama3.2')
+  }
+  const useAnthropic = requestedProvider === 'anthropic'
+    ? !!process.env.ANTHROPIC_API_KEY
+    : requestedProvider === 'openai'
+    ? false
+    : !!process.env.ANTHROPIC_API_KEY
+  return useAnthropic ? anthropic('claude-sonnet-4-6') : openai('gpt-4o')
+}
+
 ensureContentDir()
 
 const app = express()
@@ -163,11 +187,12 @@ app.delete('/api/files/:filename', (req, res) => {
 
 // --- Key routes ---
 
-app.get('/api/keys', (_req, res) => {
+app.get('/api/keys', async (_req, res) => {
   const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
   const hasOpenAI = !!process.env.OPENAI_API_KEY
   const provider = hasAnthropic ? 'anthropic' : hasOpenAI ? 'openai' : null
-  res.json({ hasKey: !!provider, provider, hasAnthropic, hasOpenAI })
+  const ollama = await detectOllama()
+  res.json({ hasKey: !!provider, provider, hasAnthropic, hasOpenAI, hasOllama: ollama.available, ollamaModels: ollama.models })
 })
 
 app.post('/api/keys', (req, res) => {
@@ -180,7 +205,7 @@ app.post('/api/keys', (req, res) => {
 // --- Chat route ---
 
 app.post('/api/chat', async (req, res) => {
-  const { messages, filenames, provider: requestedProvider } = req.body
+  const { messages, filenames, provider: requestedProvider, ollamaModel } = req.body
 
   const fileList: string[] = ['CONTEXT.md', ...(filenames ?? [])].filter(
     (f, i, arr) => arr.indexOf(f) === i // dedupe
@@ -197,12 +222,7 @@ app.post('/api/chat', async (req, res) => {
     ...systemParts,
   ].join('\n\n---\n\n')
 
-  const useAnthropic = requestedProvider === 'anthropic'
-    ? !!process.env.ANTHROPIC_API_KEY
-    : requestedProvider === 'openai'
-    ? false
-    : !!process.env.ANTHROPIC_API_KEY
-  const model = useAnthropic ? anthropic('claude-sonnet-4-6') : openai('gpt-4o')
+  const model = selectModel(requestedProvider, ollamaModel)
 
   try {
     const result = streamText({ model, system, messages })
@@ -220,15 +240,10 @@ app.post('/api/chat', async (req, res) => {
 // --- Context suggest route ---
 
 app.post('/api/context-suggest', async (req, res) => {
-  const { messages, provider: requestedProvider } = req.body
+  const { messages, provider: requestedProvider, ollamaModel } = req.body
   const current = fs.existsSync(CONTEXT_FILE) ? fs.readFileSync(CONTEXT_FILE, 'utf-8') : ''
 
-  const useAnthropic = requestedProvider === 'anthropic'
-    ? !!process.env.ANTHROPIC_API_KEY
-    : requestedProvider === 'openai'
-    ? false
-    : !!process.env.ANTHROPIC_API_KEY
-  const model = useAnthropic ? anthropic('claude-sonnet-4-6') : openai('gpt-4o')
+  const model = selectModel(requestedProvider, ollamaModel)
 
   const conversationText = (messages as { role: string; content: string }[])
     .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)

@@ -15,7 +15,9 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
   const [hasKey, setHasKey] = useState<boolean | null>(null)
   const [hasAnthropic, setHasAnthropic] = useState(false)
   const [hasOpenAI, setHasOpenAI] = useState(false)
-  const [provider, setProvider] = useState<'anthropic' | 'openai'>('anthropic')
+  const [hasOllama, setHasOllama] = useState(false)
+  const [ollamaModels, setOllamaModels] = useState<string[]>([])
+  const [provider, setProvider] = useState<'anthropic' | 'openai' | 'ollama'>('anthropic')
   const [keyInput, setKeyInput] = useState('')
   const [showProviderMenu, setShowProviderMenu] = useState(false)
   const [addingFor, setAddingFor] = useState<'anthropic' | 'openai' | null>(null)
@@ -29,6 +31,7 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const contextPromptRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const providerButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     fetch('/api/keys')
@@ -37,7 +40,10 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
         setHasKey(d.hasKey)
         setHasAnthropic(d.hasAnthropic)
         setHasOpenAI(d.hasOpenAI)
+        setHasOllama(d.hasOllama ?? false)
+        setOllamaModels(d.ollamaModels ?? [])
         if (d.provider) setProvider(d.provider)
+        else if (d.hasOllama) setProvider('ollama')
       })
   }, [])
 
@@ -55,7 +61,10 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        providerButtonRef.current && !providerButtonRef.current.contains(e.target as Node)
+      ) {
         setShowProviderMenu(false)
         setAddingFor(null)
         setAddKeyInput('')
@@ -94,11 +103,11 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
     setAddingFor(null)
   }
 
-  function switchProvider(p: 'anthropic' | 'openai') {
+  function switchProvider(p: 'anthropic' | 'openai' | 'ollama') {
     if (messages.length > 0) {
       setMessages(msgs => [...msgs, {
         role: 'divider',
-        content: p === 'anthropic' ? 'Claude' : 'OpenAI',
+        content: p === 'anthropic' ? 'Claude' : p === 'openai' ? 'OpenAI' : 'Ollama',
       }])
     }
     setProvider(p)
@@ -124,7 +133,7 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, filenames, provider }),
+        body: JSON.stringify({ messages: apiMessages, filenames, provider, ollamaModel: ollamaModels[0] }),
       })
 
       const reader = res.body!.getReader()
@@ -157,7 +166,7 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
       const res = await fetch('/api/context-suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: messages.filter(m => m.role !== 'divider'), provider }),
+        body: JSON.stringify({ messages: messages.filter(m => m.role !== 'divider'), provider, ollamaModel: ollamaModels[0] }),
       })
       const data = await res.json()
       setContextDiff({ current: data.current, suggested: data.suggested })
@@ -224,13 +233,14 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
           </svg>
           Ask AI
         </button>
-        {hasKey && (
+        {(hasKey || hasOllama) && (
           <button
+            ref={providerButtonRef}
             onClick={() => setShowProviderMenu(v => !v)}
-            className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors group"
+            className="flex items-center gap-1.5 text-xs text-neutral-300 hover:text-neutral-100 transition-colors group"
           >
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#b685ff' }} />
-            <span>{provider === 'anthropic' ? 'Claude' : 'OpenAI'}</span>
+            <span>{provider === 'anthropic' ? 'Claude' : provider === 'openai' ? 'OpenAI' : 'Ollama'}</span>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-neutral-600 group-hover:text-neutral-400 transition-colors">
               <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -277,6 +287,33 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
                 className="text-neutral-600 hover:text-neutral-400 transition-colors">add key</button>
             </div>
           ) : null}
+          {/* Ollama row */}
+          {provider === 'ollama' ? (
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <div className="flex items-center gap-2">
+                <span className="text-neutral-300">Ollama</span>
+                {ollamaModels[0] && <span className="text-neutral-600">{ollamaModels[0]}</span>}
+              </div>
+              <span className="text-neutral-600">active</span>
+            </div>
+          ) : hasOllama && ollamaModels.length > 0 ? (
+            <button onClick={() => switchProvider('ollama')}
+              className="w-full flex items-center justify-between text-xs text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 rounded px-2 py-1 transition-colors">
+              <span>Ollama</span>
+              <span>{ollamaModels[0]}</span>
+            </button>
+          ) : hasOllama ? (
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <span className="text-neutral-600">Ollama</span>
+              <span className="text-neutral-600 font-mono">ollama pull llama3.2</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <span className="text-neutral-600">Ollama</span>
+              <a href="https://ollama.com" target="_blank" rel="noreferrer"
+                className="text-neutral-600 hover:text-neutral-400 transition-colors">not running</a>
+            </div>
+          )}
           {addingFor && (
             <form onSubmit={saveAdditionalKey} className="flex gap-2 pt-1">
               <input
@@ -299,7 +336,7 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
         <div className="flex-1 flex items-center justify-center">
           <p className="text-xs text-neutral-600">Loading…</p>
         </div>
-      ) : !hasKey ? (
+      ) : !hasKey && !hasOllama ? (
         <form onSubmit={saveKey} className="flex-1 flex flex-col justify-center px-6 gap-4">
           <p className="text-sm text-neutral-300">Add your API key to start.</p>
           <input
@@ -323,6 +360,14 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
           >
             {provider === 'anthropic' ? 'Using OpenAI instead?' : 'Using Anthropic instead?'}
           </button>
+          <p className="text-xs text-neutral-600 text-center -mt-1">
+            No API key?{' '}
+            <a href="https://ollama.com" target="_blank" rel="noreferrer"
+              className="text-neutral-500 hover:text-neutral-400 transition-colors underline">
+              Run Ollama locally
+            </a>{' '}
+            for free.
+          </p>
         </form>
       ) : (
         <>
