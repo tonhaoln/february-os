@@ -148,7 +148,10 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
           {filename ? (
             <EditorContent editor={editor} className="tiptap" />
           ) : (
-            <p className="text-neutral-600 text-sm">Select a page or create one.</p>
+            <>
+              <p className="text-neutral-300 text-sm">This is where your thinking lives.</p>
+              <p className="text-neutral-600 text-sm mt-1">Pick a page or start a new one.</p>
+            </>
           )}
         </div>
       </div>
