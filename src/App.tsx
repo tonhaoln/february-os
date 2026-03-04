@@ -40,11 +40,11 @@ export default function App() {
 
   const deleteFile = useCallback(async (filename: string) => {
     await fetch(`/api/files/${encodeURIComponent(filename)}`, { method: 'DELETE' })
-    await loadFiles()
     if (activeFile === filename) {
       setActiveFile(null)
       setActiveContent('')
     }
+    await loadFiles()
   }, [activeFile, loadFiles])
 
   const saveFile = useCallback(async (content: string) => {

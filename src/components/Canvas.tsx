@@ -34,10 +34,12 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
   useEffect(() => {
     if (!editor) return
     editor.setEditable(filename !== null)
-    if (content) {
-      editor.commands.setContent(content)
-    } else {
-      editor.commands.clearContent()
+    if (filename) {
+      if (content) {
+        editor.commands.setContent(content)
+      } else {
+        editor.commands.clearContent(false)
+      }
     }
   }, [filename, content]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -96,8 +98,12 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
         onClick={() => editor?.commands.focus()}
       >
         <div className="max-w-[700px] mx-auto px-8 py-12 min-h-full">
-          {filename && editor && (
-            <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+          {editor && (
+            <BubbleMenu
+              editor={editor}
+              tippyOptions={{ duration: 100 }}
+              shouldShow={() => !!filename && !editor.state.selection.empty}
+            >
               <div className="flex items-center bg-neutral-800 border border-neutral-700 rounded shadow-lg overflow-hidden">
                 <button
                   onClick={() => editor.chain().focus().toggleBold().run()}
