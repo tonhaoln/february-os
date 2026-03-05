@@ -26,8 +26,10 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [exchangeCount, setExchangeCount] = useState(0)
-  const [contextState, setContextState] = useState<null | 'loading' | 'review'>(null)
+  const [contextState, setContextState] = useState<null | 'loading' | 'review' | 'editing'>(null)
   const [contextDiff, setContextDiff] = useState<{ current: string; suggested: string } | null>(null)
+  const [showDiff, setShowDiff] = useState(false)
+  const [editContent, setEditContent] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const contextPromptRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -190,15 +192,16 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
     }
   }
 
-  async function approveContextUpdate() {
-    if (!contextDiff) return
+  async function commitContent(content: string) {
     await fetch('/api/files/CONTEXT.md', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: contextDiff.suggested }),
+      body: JSON.stringify({ content }),
     })
     setContextState(null)
     setContextDiff(null)
+    setEditContent('')
+    setShowDiff(false)
     setExchangeCount(0)
     onContextUpdated()
   }
@@ -206,6 +209,8 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
   function dismissContextUpdate() {
     setContextState(null)
     setContextDiff(null)
+    setEditContent('')
+    setShowDiff(false)
     setExchangeCount(0)
   }
 
@@ -453,40 +458,90 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
           {contextState === 'review' && contextDiff !== null && (
             <div className="border-t border-neutral-800 flex flex-col">
               <div className="px-4 py-2 flex items-center justify-between">
-                <span className="text-xs text-neutral-400 font-medium">Context update</span>
-                <div className="flex gap-3">
-                  <button
-                    onClick={approveContextUpdate}
-                    className="text-xs text-green-500 hover:text-green-400 transition-colors"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={dismissContextUpdate}
-                    className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
-                  >
-                    Dismiss
-                  </button>
-                </div>
+                <span className="text-xs text-neutral-400 font-medium">Does this still sound like you?</span>
+                <button
+                  onClick={() => setShowDiff(v => !v)}
+                  className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                >
+                  {showDiff ? 'Hide diff' : 'Show diff'}
+                </button>
               </div>
-              <div className="overflow-y-auto max-h-48 px-4 pb-3">
-                <div className="font-mono text-xs leading-5 rounded overflow-hidden">
-                  {computeDiff(contextDiff.current, contextDiff.suggested).map((line, i) => (
-                    <div
-                      key={i}
-                      className={
-                        line.type === 'added'
-                          ? 'bg-green-950 text-green-300 px-2'
-                          : line.type === 'removed'
-                          ? 'bg-red-950 text-red-400 px-2 line-through opacity-60'
-                          : 'text-neutral-500 px-2'
-                      }
-                    >
-                      {line.type === 'added' ? '+ ' : line.type === 'removed' ? '− ' : '  '}
-                      {line.text || ' '}
-                    </div>
-                  ))}
+              {!showDiff && (
+                <div className="overflow-y-auto max-h-48 px-4 pb-2 text-xs text-neutral-300 leading-5 whitespace-pre-wrap">
+                  {contextDiff.suggested}
                 </div>
+              )}
+              {showDiff && (
+                <div className="overflow-y-auto max-h-48 px-4 pb-2">
+                  <div className="font-mono text-xs leading-5 rounded overflow-hidden">
+                    {computeDiff(contextDiff.current, contextDiff.suggested).map((line, i) => (
+                      <div
+                        key={i}
+                        className={
+                          line.type === 'added'
+                            ? 'bg-green-950 text-green-300 px-2'
+                            : line.type === 'removed'
+                            ? 'bg-red-950 text-red-400 px-2 line-through opacity-60'
+                            : 'text-neutral-500 px-2'
+                        }
+                      >
+                        {line.type === 'added' ? '+ ' : line.type === 'removed' ? '− ' : '  '}
+                        {line.text || ' '}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="px-4 pb-3 flex gap-3">
+                <button
+                  onClick={() => commitContent(contextDiff.suggested)}
+                  className="text-xs text-green-500 hover:text-green-400 transition-colors"
+                >
+                  Yes, commit
+                </button>
+                <button
+                  onClick={() => {
+                    setEditContent(contextDiff.suggested)
+                    setContextState('editing')
+                  }}
+                  className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
+                >
+                  Edit first
+                </button>
+                <button
+                  onClick={dismissContextUpdate}
+                  className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
+          {contextState === 'editing' && (
+            <div className="border-t border-neutral-800 flex flex-col">
+              <div className="px-4 py-2">
+                <span className="text-xs text-neutral-400 font-medium">Edit before committing</span>
+              </div>
+              <textarea
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                className="mx-4 mb-2 bg-neutral-900 text-xs text-neutral-300 leading-5 rounded p-2 resize-none outline-none border border-neutral-700 focus:border-neutral-500 transition-colors"
+                rows={8}
+              />
+              <div className="px-4 pb-3 flex gap-3">
+                <button
+                  onClick={() => commitContent(editContent)}
+                  className="text-xs text-green-500 hover:text-green-400 transition-colors"
+                >
+                  Commit
+                </button>
+                <button
+                  onClick={() => setContextState('review')}
+                  className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           )}

@@ -259,7 +259,7 @@ app.post('/api/context-suggest', async (req, res) => {
     .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
     .join('\n\n')
 
-  const prompt = `Here is the user's current CONTEXT.md:\n\n${current}\n\n---\n\nHere is a recent conversation:\n\n${conversationText}\n\n---\n\nSuggest an updated version of CONTEXT.md that captures anything new and useful from the conversation. Return only the full updated file content — no explanation, no markdown wrapper, no code fences.`
+  const prompt = `Here is the user's current CONTEXT.md:\n\n${current}\n\n---\n\nHere is a recent conversation:\n\n${conversationText}\n\n---\n\nRewrite CONTEXT.md to accurately represent where this person is right now. Supersede decisions that have evolved, remove what is no longer current, update what has changed. Do not just append new information — replace old information with new where relevant. The file should read as a sharp, present-tense document, not a growing transcript. Return only the full updated file content — no explanation, no markdown wrapper, no code fences.`
 
   try {
     const result = await generateText({ model, prompt })
