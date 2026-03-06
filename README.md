@@ -13,7 +13,7 @@ Not a RAG tool. You're not searching fragments — you're handing the AI a curat
 ## Requirements
 
 - **Node.js 18+** — [nodejs.org](https://nodejs.org/)
-- An Anthropic or OpenAI API key — optional, only needed for the AI panel
+- An API key (optional, only needed for the AI panel) — OpenRouter (free tier available), Anthropic, OpenAI, or Ollama (local, no key needed)
 
 ---
 
@@ -37,7 +37,7 @@ Optional. You can write and organise pages without one.
 With a key, the AI panel lets you ask questions scoped to your files.
 You're using the AI to refine your inputs, not just generate outputs. After a few exchanges, it suggests updates to your context — shows a diff, one click to commit.
 
-Get one at [console.anthropic.com](https://console.anthropic.com) or [platform.openai.com](https://platform.openai.com).
+Get one at [openrouter.ai](https://openrouter.ai) (free tier available), [console.anthropic.com](https://console.anthropic.com), or [platform.openai.com](https://platform.openai.com). Ollama runs locally with no key.
 Enter it on first use in the AI panel — stored locally in `.env`.
 
 ---
