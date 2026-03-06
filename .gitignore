@@ -10,5 +10,8 @@ docs/
 # Content — user's personal workspace
 content/
 
+# Build output
+dist/
+
 # System
 .DS_Store
