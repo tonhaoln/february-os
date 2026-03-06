@@ -51,7 +51,6 @@ export default function App() {
 
   const saveFile = useCallback(async (content: string) => {
     if (!activeFile) return
-    setActiveContent(content)
     await fetch(`/api/files/${encodeURIComponent(activeFile)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

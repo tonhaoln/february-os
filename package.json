@@ -10,7 +10,6 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.50",
     "@ai-sdk/openai": "^3.0.37",
-    "@ai-sdk/react": "^3.0.107",
     "@openrouter/ai-sdk-provider": "^2.2.3",
     "@tiptap/pm": "^2.11.5",
     "@tiptap/react": "^2.11.5",
@@ -21,6 +20,7 @@
     "express": "^4.21.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
     "simple-git": "^3.32.3",
     "tiptap-markdown": "^0.8.10"
   },

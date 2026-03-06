@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 interface AIPanelProps {
   open: boolean
@@ -124,15 +125,6 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
     el.style.height = Math.min(el.scrollHeight, 124) + 'px'
   }
 
-  function stripMarkdown(text: string): string {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/\*(.*?)\*/g, '$1')
-      .replace(/^#{1,6}\s+/gm, '')
-      .replace(/`{1,3}([^`]*)`{1,3}/g, '$1')
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-      .trim()
-  }
 
   function clearChat() {
     setMessages([])
@@ -649,14 +641,17 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               return (
                 <div key={i} ref={isStreamingMsg ? newResponseRef : null}
                   className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
-                  <div className={`relative max-w-[85%] rounded px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
-                    m.role === 'user' ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-300'
+                  <div className={`relative max-w-[85%] rounded px-3 py-2 text-sm leading-relaxed ${
+                    m.role === 'user' ? 'bg-neutral-800 text-neutral-200 whitespace-pre-wrap' : 'text-neutral-300'
                   }`}>
-                    {m.content}
+                    {m.role === 'assistant'
+                      ? <div className="ai-prose"><ReactMarkdown>{m.content}</ReactMarkdown></div>
+                      : m.content
+                    }
                     {m.role === 'assistant' && m.content && (
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(stripMarkdown(m.content))
+                          navigator.clipboard.writeText(m.content)
                           setCopiedIndex(i)
                           setTimeout(() => setCopiedIndex(null), 1500)
                         }}

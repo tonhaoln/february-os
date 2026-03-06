@@ -129,6 +129,15 @@ function selectModel(requestedProvider: string, ollamaModel?: string) {
   return useAnthropic ? anthropic('claude-sonnet-4-6') : openai('gpt-4o')
 }
 
+async function detectProvider(): Promise<{ provider: string; ollamaModel?: string }> {
+  if (process.env.OPENROUTER_API_KEY) return { provider: 'openrouter' }
+  if (process.env.ANTHROPIC_API_KEY) return { provider: 'anthropic' }
+  if (process.env.OPENAI_API_KEY) return { provider: 'openai' }
+  const ollama = await detectOllama()
+  if (ollama.available && ollama.models.length > 0) return { provider: 'ollama', ollamaModel: ollama.models[0] }
+  return { provider: 'anthropic' }
+}
+
 ensureContentDir()
 
 const app = express()
@@ -278,6 +287,25 @@ app.post('/api/context-suggest', async (req, res) => {
   try {
     const result = await generateText({ model, prompt })
     res.json({ current, suggested: result.text })
+  } catch {
+    res.status(500).json({ error: 'AI request failed' })
+  }
+})
+
+// --- Improve route ---
+
+app.post('/api/improve', async (req, res) => {
+  const { text } = req.body
+  if (!text) return res.status(400).json({ error: 'Missing text' })
+
+  const { provider, ollamaModel } = await detectProvider()
+  const model = selectModel(provider, ollamaModel)
+
+  const prompt = `Fix spelling, grammar, and clarity in the following text. Preserve the author's voice and intent. Do not add or remove ideas. Do not wrap in quotes or code fences. Return only the improved text.\n\n${text}`
+
+  try {
+    const result = await generateText({ model, prompt })
+    res.json({ improved: result.text })
   } catch {
     res.status(500).json({ error: 'AI request failed' })
   }
