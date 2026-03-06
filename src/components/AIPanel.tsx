@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 
 interface AIPanelProps {
+  open: boolean
   onClose: () => void
+  panelWidth: number
+  onDragStart: (e: React.MouseEvent) => void
+  onExpand: () => void
   activeFile: string | null
   onContextUpdated: () => void
 }
@@ -21,7 +25,24 @@ function ExternalLinkIcon() {
   )
 }
 
-export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPanelProps) {
+function CopyIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <rect x="1" y="3" width="7" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M4 3V2a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H8" stroke="currentColor" strokeWidth="1.2"/>
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpand, activeFile, onContextUpdated }: AIPanelProps) {
   const [hasKey, setHasKey] = useState<boolean | null>(null)
   const [hasAnthropic, setHasAnthropic] = useState(false)
   const [hasOpenAI, setHasOpenAI] = useState(false)
@@ -41,10 +62,14 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
   const [contextDiff, setContextDiff] = useState<{ current: string; suggested: string } | null>(null)
   const [showDiff, setShowDiff] = useState(false)
   const [editContent, setEditContent] = useState('')
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const contextPromptRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const providerButtonRef = useRef<HTMLButtonElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const newResponseRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/keys')
@@ -62,8 +87,12 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
   }, [])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (isLoading) {
+      setTimeout(() => {
+        newResponseRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 50)
+    }
+  }, [isLoading])
 
   useEffect(() => {
     if (exchangeCount >= 3 && contextState === null) {
@@ -87,6 +116,32 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
     if (showProviderMenu) document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showProviderMenu])
+
+  function adjustTextareaHeight() {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 124) + 'px'
+  }
+
+  function stripMarkdown(text: string): string {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/`{1,3}([^`]*)`{1,3}/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .trim()
+  }
+
+  function clearChat() {
+    setMessages([])
+    setExchangeCount(0)
+    setContextState(null)
+    setContextDiff(null)
+    setShowDiff(false)
+    setEditContent('')
+  }
 
   async function saveKey(e: React.FormEvent) {
     e.preventDefault()
@@ -155,10 +210,13 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
     setInputValue('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setIsLoading(true)
 
-    const assistantMessage: Message = { role: 'assistant', content: '' }
-    setMessages(msgs => [...msgs, assistantMessage])
+    setMessages(msgs => [...msgs, { role: 'assistant', content: '' }])
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
 
     try {
       const filenames = activeFile && activeFile !== 'CONTEXT.md' ? [activeFile] : []
@@ -167,6 +225,7 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: apiMessages, filenames, provider, ollamaModel: ollamaModels[0] }),
+        signal: controller.signal,
       })
 
       const reader = res.body!.getReader()
@@ -182,13 +241,18 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
           return [...rest, { ...last, content: last.content + chunk }]
         })
       }
-    } catch {
-      setMessages(msgs => {
-        const rest = msgs.slice(0, -1)
-        return [...rest, { role: 'assistant', content: 'Something went wrong. Check your API key and try again.' }]
-      })
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Clean stop — leave partial content as-is
+      } else {
+        setMessages(msgs => {
+          const rest = msgs.slice(0, -1)
+          return [...rest, { role: 'assistant', content: 'Something went wrong. Check your API key and try again.' }]
+        })
+      }
     } finally {
       setIsLoading(false)
+      abortControllerRef.current = null
       setExchangeCount(c => c + 1)
     }
   }
@@ -249,170 +313,223 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
     return result
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      send()
-    }
-  }
-
   return (
-    <aside className="w-80 flex-shrink-0 flex flex-col border-l border-neutral-800 bg-neutral-950">
+    <aside
+      style={{ width: panelWidth, display: open ? 'flex' : 'none' }}
+      className="relative flex-shrink-0 flex-col border-l border-neutral-800 bg-neutral-950"
+    >
+      {/* Drag handle */}
+      <div
+        onMouseDown={onDragStart}
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-neutral-700 transition-colors z-10"
+      />
+
       {/* Header */}
-      <div className="flex items-center px-4 h-11 flex-shrink-0 border-b border-neutral-800 gap-2">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200 transition-colors flex-1"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Ask AI
-        </button>
-        {(hasKey || hasOllama) && (
+      <div className="flex items-center px-3 h-11 flex-shrink-0 border-b border-neutral-800 gap-2">
+        {(hasKey || hasOllama) ? (
           <button
             ref={providerButtonRef}
             onClick={() => setShowProviderMenu(v => !v)}
-            className="flex items-center gap-1.5 text-xs text-neutral-300 hover:text-neutral-100 transition-colors group"
+            className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors group flex-1 min-w-0"
           >
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#b685ff' }} />
-            <span>{provider === 'anthropic' ? 'Claude' : provider === 'openai' ? 'OpenAI' : provider === 'openrouter' ? 'OpenRouter' : 'Ollama'}</span>
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-neutral-600 group-hover:text-neutral-400 transition-colors">
+            <span className="truncate">
+              {provider === 'anthropic' ? 'Claude' : provider === 'openai' ? 'OpenAI' : provider === 'openrouter' ? 'OpenRouter' : 'Ollama'}
+            </span>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0 text-neutral-600 group-hover:text-neutral-400 transition-colors">
               <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
+        ) : (
+          <div className="flex-1" />
         )}
+
+        <div className="flex items-center gap-0.5">
+          {(hasKey || hasOllama) && (
+            <button onClick={clearChat} title="New chat"
+              className="p-2 text-neutral-600 hover:text-neutral-300 transition-colors rounded">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M9.5 2.5L11.5 4.5L5 11H3V9L9.5 2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+          <button onClick={onExpand} title="Expand"
+            className="p-2 text-neutral-600 hover:text-neutral-300 transition-colors rounded">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 5V2H5M9 2H12V5M12 9V12H9M5 12H2V9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <button onClick={onClose} title="Close"
+            className="p-2 text-neutral-600 hover:text-neutral-300 transition-colors rounded">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 3L11 11M11 3L3 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Provider menu */}
       {showProviderMenu && (
-        <div ref={menuRef} className="border-b border-neutral-800 px-4 py-3 space-y-1">
+        <div ref={menuRef} className="border-b border-neutral-800 pb-2">
+
           {/* Anthropic row */}
-          {provider === 'anthropic' ? (
-            <div className="flex items-center justify-between text-xs px-2 py-1">
-              <span className="text-neutral-300">Claude</span>
-              <button onClick={() => removeKey('anthropic')} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
+          {addingFor === 'anthropic' ? (
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-4 py-2 border-b border-neutral-800 last:border-0">
+              <input type="password" value={addKeyInput} onChange={e => setAddKeyInput(e.target.value)}
+                placeholder="sk-ant-…"
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                autoFocus />
+              <button type="submit" disabled={!addKeyInput.trim()}
+                className="text-xs px-2 py-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                Save
+              </button>
+            </form>
+          ) : provider === 'anthropic' ? (
+            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-[#b685ff] text-neutral-100">Claude</div>
+              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
+                <button onClick={() => removeKey('anthropic')} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+              </div>
             </div>
           ) : hasAnthropic ? (
-            <div onClick={() => switchProvider('anthropic')}
-              className="flex items-center justify-between text-xs px-2 py-1 hover:bg-neutral-900 rounded transition-colors cursor-pointer text-neutral-600 hover:text-neutral-300">
-              <span>Claude</span>
-              <button onClick={e => { e.stopPropagation(); removeKey('anthropic') }} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
-            </div>
-          ) : addingFor !== 'anthropic' ? (
-            <div className="flex items-center justify-between text-xs px-2 py-1">
-              <span className="text-neutral-600">Claude</span>
-              <button onClick={() => setAddingFor('anthropic')}
-                className="text-neutral-600 hover:text-neutral-400 transition-colors">add key</button>
+            <div onClick={() => switchProvider('anthropic')} className="flex items-stretch cursor-pointer hover:bg-neutral-900 transition-colors border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-100">Claude</div>
+              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
+                <button onClick={e => { e.stopPropagation(); removeKey('anthropic') }} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+              </div>
             </div>
           ) : (
-            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-2 py-1">
-              <input
-                type="password"
-                value={addKeyInput}
-                onChange={e => setAddKeyInput(e.target.value)}
-                placeholder="sk-ant-…"
-                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
-                autoFocus
-              />
+            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-600">Claude</div>
+              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
+                <button onClick={() => setAddingFor('anthropic')} className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">add key</button>
+              </div>
+            </div>
+          )}
+
+          {/* OpenAI row */}
+          {addingFor === 'openai' ? (
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-4 py-2 border-b border-neutral-800 last:border-0">
+              <input type="password" value={addKeyInput} onChange={e => setAddKeyInput(e.target.value)}
+                placeholder="sk-…"
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                autoFocus />
               <button type="submit" disabled={!addKeyInput.trim()}
-                className="text-xs px-2 py-1 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                className="text-xs px-2 py-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
                 Save
               </button>
             </form>
-          )}
-          {/* OpenAI row */}
-          {provider === 'openai' ? (
-            <div className="flex items-center justify-between text-xs px-2 py-1">
-              <span className="text-neutral-300">OpenAI</span>
-              <button onClick={() => removeKey('openai')} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
+          ) : provider === 'openai' ? (
+            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-[#b685ff] text-neutral-100">OpenAI</div>
+              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
+                <button onClick={() => removeKey('openai')} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+              </div>
             </div>
           ) : hasOpenAI ? (
-            <div onClick={() => switchProvider('openai')}
-              className="flex items-center justify-between text-xs px-2 py-1 hover:bg-neutral-900 rounded transition-colors cursor-pointer text-neutral-600 hover:text-neutral-300">
-              <span>OpenAI</span>
-              <button onClick={e => { e.stopPropagation(); removeKey('openai') }} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
-            </div>
-          ) : addingFor !== 'openai' ? (
-            <div className="flex items-center justify-between text-xs px-2 py-1">
-              <span className="text-neutral-600">OpenAI</span>
-              <button onClick={() => setAddingFor('openai')}
-                className="text-neutral-600 hover:text-neutral-400 transition-colors">add key</button>
+            <div onClick={() => switchProvider('openai')} className="flex items-stretch cursor-pointer hover:bg-neutral-900 transition-colors border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-100">OpenAI</div>
+              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
+                <button onClick={e => { e.stopPropagation(); removeKey('openai') }} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+              </div>
             </div>
           ) : (
-            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-2 py-1">
-              <input
-                type="password"
-                value={addKeyInput}
-                onChange={e => setAddKeyInput(e.target.value)}
-                placeholder="sk-…"
-                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
-                autoFocus
-              />
+            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-600">OpenAI</div>
+              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
+                <button onClick={() => setAddingFor('openai')} className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">add key</button>
+              </div>
+            </div>
+          )}
+
+          {/* OpenRouter row */}
+          {addingFor === 'openrouter' ? (
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-4 py-2 border-b border-neutral-800 last:border-0">
+              <input type="password" value={addKeyInput} onChange={e => setAddKeyInput(e.target.value)}
+                placeholder="sk-or-…"
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                autoFocus />
               <button type="submit" disabled={!addKeyInput.trim()}
-                className="text-xs px-2 py-1 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                className="text-xs px-2 py-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
                 Save
               </button>
             </form>
-          )}
-          {/* OpenRouter row */}
-          {provider === 'openrouter' ? (
-            <div className="flex items-center justify-between text-xs px-2 py-1">
-              <span className="text-neutral-300">OpenRouter</span>
-              <button onClick={() => removeKey('openrouter')} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
+          ) : provider === 'openrouter' ? (
+            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-[#b685ff] text-neutral-100">OpenRouter</div>
+              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
+                <button onClick={() => removeKey('openrouter')} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+              </div>
             </div>
           ) : hasOpenRouter ? (
-            <div onClick={() => switchProvider('openrouter')}
-              className="flex items-center justify-between text-xs px-2 py-1 hover:bg-neutral-900 rounded transition-colors cursor-pointer text-neutral-600 hover:text-neutral-300">
-              <span>OpenRouter</span>
-              <button onClick={e => { e.stopPropagation(); removeKey('openrouter') }} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
-            </div>
-          ) : addingFor !== 'openrouter' ? (
-            <div className="flex items-center justify-between text-xs px-2 py-1">
-              <span className="text-neutral-600">OpenRouter</span>
-              <button onClick={() => setAddingFor('openrouter')}
-                className="text-neutral-600 hover:text-neutral-400 transition-colors">add key</button>
+            <div onClick={() => switchProvider('openrouter')} className="flex items-stretch cursor-pointer hover:bg-neutral-900 transition-colors border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-100">OpenRouter</div>
+              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
+                <button onClick={e => { e.stopPropagation(); removeKey('openrouter') }} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+              </div>
             </div>
           ) : (
-            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-2 py-1">
-              <input
-                type="password"
-                value={addKeyInput}
-                onChange={e => setAddKeyInput(e.target.value)}
-                placeholder="sk-or-…"
-                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
-                autoFocus
-              />
-              <button type="submit" disabled={!addKeyInput.trim()}
-                className="text-xs px-2 py-1 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
-                Save
-              </button>
-            </form>
+            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex flex-col justify-center px-4 py-2.5 border-l-2 border-transparent gap-0.5">
+                <span className="text-sm text-neutral-600">OpenRouter</span>
+                <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer"
+                  className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors inline-flex items-center gap-1">
+                  Free · no card required <ExternalLinkIcon />
+                </a>
+              </div>
+              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
+                <button onClick={() => setAddingFor('openrouter')} className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">add key</button>
+              </div>
+            </div>
           )}
+
           {/* Ollama row */}
           {provider === 'ollama' ? (
-            <div className="flex items-center justify-between text-xs px-2 py-1">
-              <span className="text-neutral-300">Ollama</span>
-              {ollamaModels[0] && <span className="text-neutral-600">{ollamaModels[0]}</span>}
+            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center justify-between px-4 py-2.5 text-sm border-l-2 border-[#b685ff] text-neutral-100">
+                <span>Ollama</span>
+                {ollamaModels[0] && <span className="text-xs text-neutral-500 pr-2">{ollamaModels[0]}</span>}
+              </div>
+              <div className="w-28 border-l border-neutral-800" />
             </div>
           ) : hasOllama && ollamaModels.length > 0 ? (
-            <button onClick={() => switchProvider('ollama')}
-              className="w-full flex items-center justify-between text-xs text-neutral-600 hover:text-neutral-300 hover:bg-neutral-900 rounded px-2 py-1 transition-colors">
-              <span>Ollama</span>
-              <span>{ollamaModels[0]}</span>
-            </button>
+            <div onClick={() => switchProvider('ollama')} className="flex items-stretch cursor-pointer hover:bg-neutral-900 transition-colors border-b border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center justify-between px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-100">
+                <span>Ollama</span>
+                <span className="text-xs text-neutral-600 pr-2">{ollamaModels[0]}</span>
+              </div>
+              <div className="w-28 border-l border-neutral-800" />
+            </div>
           ) : hasOllama ? (
-            <div className="flex flex-col gap-1 px-2 py-1">
-              <span className="text-neutral-600 text-xs">Run this in your terminal:</span>
-              <code className="text-xs text-neutral-400 font-mono bg-neutral-900 px-2 py-1 rounded">ollama pull llama3.2</code>
+            <div className="flex flex-col px-4 py-2.5 gap-1.5 border-l-2 border-transparent border-b border-neutral-800 last:border-b-0">
+              <span className="text-sm text-neutral-600">Ollama</span>
+              <span className="text-xs text-neutral-600">Run this in your terminal:</span>
+              <div className="flex items-center gap-1">
+                <code className="flex-1 text-xs text-neutral-400 font-mono bg-neutral-900 px-2 py-1 rounded">ollama pull llama3.2</code>
+                <button onClick={() => navigator.clipboard.writeText('ollama pull llama3.2')}
+                  className="p-1 text-neutral-600 hover:text-neutral-400 transition-colors flex-shrink-0" title="Copy">
+                  <CopyIcon />
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between text-xs px-2 py-1">
-              <span className="text-neutral-600">Ollama</span>
+            <div className="flex flex-col px-4 py-2.5 gap-2 border-l-2 border-transparent border-b border-neutral-800 last:border-b-0">
+              <span className="text-sm text-neutral-600">Ollama</span>
+              <span className="text-xs text-neutral-600">Not running — open the app or:</span>
+              <div className="flex items-center gap-1">
+                <code className="flex-1 text-xs text-neutral-400 font-mono bg-neutral-900 px-2 py-1 rounded">ollama serve</code>
+                <button onClick={() => navigator.clipboard.writeText('ollama serve')}
+                  className="p-1 text-neutral-600 hover:text-neutral-400 transition-colors flex-shrink-0" title="Copy">
+                  <CopyIcon />
+                </button>
+              </div>
               <a href="https://ollama.com" target="_blank" rel="noreferrer"
-                className="text-neutral-600 hover:text-neutral-400 transition-colors">not running</a>
+                className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors inline-flex items-center gap-1">
+                Download at ollama.com <ExternalLinkIcon />
+              </a>
             </div>
           )}
+
         </div>
       )}
 
@@ -514,9 +631,11 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
         <>
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
             {messages.length === 0 && (
-              <p className="text-xs text-neutral-600 text-center mt-8">
-                Ask anything about your open page.
-              </p>
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-sm text-neutral-500 text-center leading-relaxed">
+                  Ask anything about<br />your open page.
+                </p>
+              </div>
             )}
             {messages.map((m, i) => {
               if (m.role === 'divider') return (
@@ -526,12 +645,26 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
                   <div className="flex-1 h-px bg-neutral-800" />
                 </div>
               )
+              const isStreamingMsg = isLoading && i === messages.length - 1 && m.role === 'assistant'
               return (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
+                <div key={i} ref={isStreamingMsg ? newResponseRef : null}
+                  className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
+                  <div className={`relative max-w-[85%] rounded px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
                     m.role === 'user' ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-300'
                   }`}>
                     {m.content}
+                    {m.role === 'assistant' && m.content && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(stripMarkdown(m.content))
+                          setCopiedIndex(i)
+                          setTimeout(() => setCopiedIndex(null), 1500)
+                        }}
+                        className="absolute -bottom-8 left-0 p-1.5 rounded text-neutral-600 hover:text-neutral-400 transition-colors bg-neutral-900 border border-neutral-800"
+                      >
+                        {copiedIndex === i ? <CheckIcon /> : <CopyIcon />}
+                      </button>
+                    )}
                   </div>
                 </div>
               )
@@ -540,6 +673,13 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
               <div className="flex justify-start">
                 <div className="text-neutral-600 text-sm px-1">…</div>
               </div>
+            )}
+            {isLoading && (provider === 'ollama' || provider === 'openrouter') && (
+              <p className="text-xs text-neutral-600 px-1">
+                {provider === 'ollama'
+                  ? 'Running locally — this may take a moment.'
+                  : 'Free tier — this may take a moment.'}
+              </p>
             )}
             {exchangeCount >= 3 && contextState === null && !isLoading && (
               <div ref={contextPromptRef} className="flex flex-col items-center gap-1.5 pt-1 pb-4">
@@ -654,25 +794,41 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
             </div>
           )}
 
-          <div className="px-3 pb-3 pt-2 border-t border-neutral-800 flex gap-2">
-            <input
+          <div className="px-3 pb-3 pt-2 border-t border-neutral-800 flex gap-2 items-end">
+            <textarea
+              ref={textareaRef}
               value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onChange={e => { setInputValue(e.target.value); adjustTextareaHeight() }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+              }}
               placeholder="Ask something…"
               disabled={isLoading}
-              className="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-600 disabled:opacity-50"
+              rows={1}
+              className="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-600 disabled:opacity-50 resize-none overflow-y-auto leading-relaxed"
+              style={{ maxHeight: '124px' }}
             />
-            <button
-              type="button"
-              onClick={send}
-              disabled={!inputValue.trim() || isLoading}
-              className="px-3 py-2 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40 text-sm"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
+            {isLoading ? (
+              <button
+                onClick={() => abortControllerRef.current?.abort()}
+                className="px-3 py-2 rounded bg-neutral-800 text-neutral-500 hover:text-neutral-300 transition-colors flex-shrink-0"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <rect x="3" y="3" width="8" height="8" rx="1" fill="currentColor"/>
+                </svg>
+              </button>
+            ) : (
+              <button
+                onClick={send}
+                disabled={!inputValue.trim()}
+                className="px-3 py-2 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-40 flex-shrink-0"
+                style={{ color: '#b685ff' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 12V2M3 6l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            )}
           </div>
 
           <div className="px-3 pb-3 pt-2 border-t border-neutral-800">

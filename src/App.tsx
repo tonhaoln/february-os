@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
 import AIPanel from './components/AIPanel'
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [aiPanelOpen, setAiPanelOpen] = useState(false)
+  const [aiPanelOpen, setAiPanelOpen] = useState(true)
+  const [panelWidth, setPanelWidth] = useState(560)
+  const dragStartRef = useRef<{ x: number; w: number } | null>(null)
   const [files, setFiles] = useState<string[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [activeContent, setActiveContent] = useState<string>('')
@@ -57,6 +59,26 @@ export default function App() {
     })
   }, [activeFile])
 
+  function startDrag(e: React.MouseEvent) {
+    dragStartRef.current = { x: e.clientX, w: panelWidth }
+    function onMove(e: MouseEvent) {
+      if (!dragStartRef.current) return
+      const delta = dragStartRef.current.x - e.clientX
+      setPanelWidth(Math.min(590, Math.max(290, dragStartRef.current.w + delta)))
+    }
+    function onUp() {
+      dragStartRef.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  function handleExpand() {
+    setPanelWidth(w => w < 590 ? 590 : 560)
+  }
+
   const renameFile = useCallback(async (newName: string) => {
     if (!activeFile) return
     const res = await fetch(`/api/files/${encodeURIComponent(activeFile)}`, {
@@ -70,7 +92,7 @@ export default function App() {
   }, [activeFile, loadFiles])
 
   return (
-    <div className="flex h-screen bg-neutral-950 text-neutral-200 overflow-hidden">
+    <div className="flex h-screen bg-neutral-900 text-neutral-200 overflow-hidden">
       <Sidebar
         open={sidebarOpen}
         onToggle={() => setSidebarOpen(o => !o)}
@@ -88,13 +110,15 @@ export default function App() {
         onSave={saveFile}
         onRename={renameFile}
       />
-      {aiPanelOpen && (
-        <AIPanel
-          onClose={() => setAiPanelOpen(false)}
-          activeFile={activeFile}
-          onContextUpdated={() => { if (activeFile === 'CONTEXT.md') openFile('CONTEXT.md') }}
-        />
-      )}
+      <AIPanel
+        open={aiPanelOpen}
+        onClose={() => setAiPanelOpen(false)}
+        panelWidth={panelWidth}
+        onDragStart={startDrag}
+        onExpand={handleExpand}
+        activeFile={activeFile}
+        onContextUpdated={() => { if (activeFile === 'CONTEXT.md') openFile('CONTEXT.md') }}
+      />
     </div>
   )
 }
