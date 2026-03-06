@@ -11,6 +11,7 @@
     "@ai-sdk/anthropic": "^3.0.50",
     "@ai-sdk/openai": "^3.0.37",
     "@ai-sdk/react": "^3.0.107",
+    "@openrouter/ai-sdk-provider": "^2.2.3",
     "@tiptap/pm": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",

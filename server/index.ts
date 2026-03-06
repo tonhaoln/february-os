@@ -7,6 +7,7 @@ import simpleGit from 'simple-git'
 import { streamText, generateText } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { openai, createOpenAI } from '@ai-sdk/openai'
+import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -83,7 +84,11 @@ async function commitFile(filename: string) {
 }
 
 function writeEnvKey(provider: string, key: string) {
-  const varName = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY'
+  const varName = provider === 'anthropic'
+    ? 'ANTHROPIC_API_KEY'
+    : provider === 'openai'
+    ? 'OPENAI_API_KEY'
+    : 'OPENROUTER_API_KEY'
   let contents = fs.existsSync(ENV_FILE) ? fs.readFileSync(ENV_FILE, 'utf-8') : ''
   const regex = new RegExp(`^${varName}=.*$`, 'm')
   if (regex.test(contents)) {
@@ -111,6 +116,10 @@ function selectModel(requestedProvider: string, ollamaModel?: string) {
   if (requestedProvider === 'ollama') {
     const ollamaOpenAI = createOpenAI({ baseURL: 'http://localhost:11434/v1', apiKey: 'ollama' })
     return ollamaOpenAI(ollamaModel ?? 'llama3.2')
+  }
+  if (requestedProvider === 'openrouter') {
+    const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY ?? '' })
+    return openrouter('openrouter/auto')
   }
   const useAnthropic = requestedProvider === 'anthropic'
     ? !!process.env.ANTHROPIC_API_KEY
@@ -190,9 +199,10 @@ app.delete('/api/files/:filename', (req, res) => {
 app.get('/api/keys', async (_req, res) => {
   const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
   const hasOpenAI = !!process.env.OPENAI_API_KEY
-  const provider = hasAnthropic ? 'anthropic' : hasOpenAI ? 'openai' : null
+  const hasOpenRouter = !!process.env.OPENROUTER_API_KEY
   const ollama = await detectOllama()
-  res.json({ hasKey: !!provider, provider, hasAnthropic, hasOpenAI, hasOllama: ollama.available, ollamaModels: ollama.models })
+  const provider = hasOpenRouter ? 'openrouter' : hasAnthropic ? 'anthropic' : hasOpenAI ? 'openai' : null
+  res.json({ hasKey: !!provider, provider, hasAnthropic, hasOpenAI, hasOpenRouter, hasOllama: ollama.available, ollamaModels: ollama.models })
 })
 
 app.post('/api/keys', (req, res) => {
@@ -204,7 +214,11 @@ app.post('/api/keys', (req, res) => {
 
 app.delete('/api/keys/:provider', (req, res) => {
   const { provider } = req.params
-  const varName = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY'
+  const varName = provider === 'anthropic'
+    ? 'ANTHROPIC_API_KEY'
+    : provider === 'openai'
+    ? 'OPENAI_API_KEY'
+    : 'OPENROUTER_API_KEY'
   let contents = fs.existsSync(ENV_FILE) ? fs.readFileSync(ENV_FILE, 'utf-8') : ''
   contents = contents.replace(new RegExp(`^${varName}=.*\\n?`, 'm'), '')
   fs.writeFileSync(ENV_FILE, contents, 'utf-8')

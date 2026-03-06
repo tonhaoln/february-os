@@ -11,16 +11,27 @@ interface Message {
   content: string
 }
 
+function ExternalLinkIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" style={{ flexShrink: 0 }}>
+      <rect x="1" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M5 1h5v5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 1L5.5 5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
 export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPanelProps) {
   const [hasKey, setHasKey] = useState<boolean | null>(null)
   const [hasAnthropic, setHasAnthropic] = useState(false)
   const [hasOpenAI, setHasOpenAI] = useState(false)
   const [hasOllama, setHasOllama] = useState(false)
   const [ollamaModels, setOllamaModels] = useState<string[]>([])
-  const [provider, setProvider] = useState<'anthropic' | 'openai' | 'ollama'>('anthropic')
+  const [provider, setProvider] = useState<'anthropic' | 'openai' | 'ollama' | 'openrouter'>('openrouter')
+  const [hasOpenRouter, setHasOpenRouter] = useState(false)
   const [keyInput, setKeyInput] = useState('')
   const [showProviderMenu, setShowProviderMenu] = useState(false)
-  const [addingFor, setAddingFor] = useState<'anthropic' | 'openai' | null>(null)
+  const [addingFor, setAddingFor] = useState<'anthropic' | 'openai' | 'openrouter' | null>(null)
   const [addKeyInput, setAddKeyInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -42,6 +53,7 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
         setHasKey(d.hasKey)
         setHasAnthropic(d.hasAnthropic)
         setHasOpenAI(d.hasOpenAI)
+        setHasOpenRouter(d.hasOpenRouter ?? false)
         setHasOllama(d.hasOllama ?? false)
         setOllamaModels(d.ollamaModels ?? [])
         if (d.provider) setProvider(d.provider)
@@ -85,7 +97,8 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
       body: JSON.stringify({ key: keyInput.trim(), provider }),
     })
     if (provider === 'anthropic') setHasAnthropic(true)
-    else setHasOpenAI(true)
+    else if (provider === 'openai') setHasOpenAI(true)
+    else setHasOpenRouter(true)
     setHasKey(true)
     setKeyInput('')
   }
@@ -99,31 +112,35 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
       body: JSON.stringify({ key: addKeyInput.trim(), provider: addingFor }),
     })
     if (addingFor === 'anthropic') setHasAnthropic(true)
-    else setHasOpenAI(true)
+    else if (addingFor === 'openai') setHasOpenAI(true)
+    else setHasOpenRouter(true)
     switchProvider(addingFor)
     setAddKeyInput('')
     setAddingFor(null)
   }
 
-  async function removeKey(p: 'anthropic' | 'openai') {
+  async function removeKey(p: 'anthropic' | 'openai' | 'openrouter') {
     await fetch(`/api/keys/${p}`, { method: 'DELETE' })
     const newHasAnthropic = p === 'anthropic' ? false : hasAnthropic
     const newHasOpenAI = p === 'openai' ? false : hasOpenAI
+    const newHasOpenRouter = p === 'openrouter' ? false : hasOpenRouter
     if (p === 'anthropic') setHasAnthropic(false)
-    else setHasOpenAI(false)
-    setHasKey(newHasAnthropic || newHasOpenAI)
+    else if (p === 'openai') setHasOpenAI(false)
+    else setHasOpenRouter(false)
+    setHasKey(newHasAnthropic || newHasOpenAI || newHasOpenRouter)
     if (provider === p) {
-      if (p === 'anthropic' && newHasOpenAI) setProvider('openai')
-      else if (p === 'openai' && newHasAnthropic) setProvider('anthropic')
+      if (newHasOpenRouter) setProvider('openrouter')
+      else if (newHasAnthropic) setProvider('anthropic')
+      else if (newHasOpenAI) setProvider('openai')
       else if (hasOllama) setProvider('ollama')
     }
   }
 
-  function switchProvider(p: 'anthropic' | 'openai' | 'ollama') {
+  function switchProvider(p: 'anthropic' | 'openai' | 'ollama' | 'openrouter') {
     if (messages.length > 0) {
       setMessages(msgs => [...msgs, {
         role: 'divider',
-        content: p === 'anthropic' ? 'Claude' : p === 'openai' ? 'OpenAI' : 'Ollama',
+        content: p === 'anthropic' ? 'Claude' : p === 'openai' ? 'OpenAI' : p === 'openrouter' ? 'OpenRouter' : 'Ollama',
       }])
     }
     setProvider(p)
@@ -259,7 +276,7 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
             className="flex items-center gap-1.5 text-xs text-neutral-300 hover:text-neutral-100 transition-colors group"
           >
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#b685ff' }} />
-            <span>{provider === 'anthropic' ? 'Claude' : provider === 'openai' ? 'OpenAI' : 'Ollama'}</span>
+            <span>{provider === 'anthropic' ? 'Claude' : provider === 'openai' ? 'OpenAI' : provider === 'openrouter' ? 'OpenRouter' : 'Ollama'}</span>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-neutral-600 group-hover:text-neutral-400 transition-colors">
               <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -338,6 +355,40 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
               </button>
             </form>
           )}
+          {/* OpenRouter row */}
+          {provider === 'openrouter' ? (
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <span className="text-neutral-300">OpenRouter</span>
+              <button onClick={() => removeKey('openrouter')} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
+            </div>
+          ) : hasOpenRouter ? (
+            <div onClick={() => switchProvider('openrouter')}
+              className="flex items-center justify-between text-xs px-2 py-1 hover:bg-neutral-900 rounded transition-colors cursor-pointer text-neutral-600 hover:text-neutral-300">
+              <span>OpenRouter</span>
+              <button onClick={e => { e.stopPropagation(); removeKey('openrouter') }} className="text-neutral-600 hover:text-neutral-400 transition-colors">×</button>
+            </div>
+          ) : addingFor !== 'openrouter' ? (
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <span className="text-neutral-600">OpenRouter</span>
+              <button onClick={() => setAddingFor('openrouter')}
+                className="text-neutral-600 hover:text-neutral-400 transition-colors">add key</button>
+            </div>
+          ) : (
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-2 py-1">
+              <input
+                type="password"
+                value={addKeyInput}
+                onChange={e => setAddKeyInput(e.target.value)}
+                placeholder="sk-or-…"
+                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                autoFocus
+              />
+              <button type="submit" disabled={!addKeyInput.trim()}
+                className="text-xs px-2 py-1 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                Save
+              </button>
+            </form>
+          )}
           {/* Ollama row */}
           {provider === 'ollama' ? (
             <div className="flex items-center justify-between text-xs px-2 py-1">
@@ -351,9 +402,9 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
               <span>{ollamaModels[0]}</span>
             </button>
           ) : hasOllama ? (
-            <div className="flex items-center justify-between text-xs px-2 py-1">
-              <span className="text-neutral-600">Ollama</span>
-              <span className="text-neutral-600 font-mono">ollama pull llama3.2</span>
+            <div className="flex flex-col gap-1 px-2 py-1">
+              <span className="text-neutral-600 text-xs">Run this in your terminal:</span>
+              <code className="text-xs text-neutral-400 font-mono bg-neutral-900 px-2 py-1 rounded">ollama pull llama3.2</code>
             </div>
           ) : (
             <div className="flex items-center justify-between text-xs px-2 py-1">
@@ -370,38 +421,95 @@ export default function AIPanel({ onClose, activeFile, onContextUpdated }: AIPan
           <p className="text-xs text-neutral-600">Loading…</p>
         </div>
       ) : !hasKey && !hasOllama ? (
-        <form onSubmit={saveKey} className="flex-1 flex flex-col justify-center px-6 gap-4">
-          <p className="text-sm text-neutral-300">Add your API key to start.</p>
-          <input
-            type="password"
-            value={keyInput}
-            onChange={e => setKeyInput(e.target.value)}
-            placeholder={provider === 'anthropic' ? 'sk-ant-…' : 'sk-…'}
-            className="bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
-          />
-          <button
-            type="submit"
-            disabled={!keyInput.trim()}
-            className="py-2 rounded bg-neutral-700 text-neutral-100 text-sm hover:bg-neutral-600 transition-colors disabled:opacity-40"
-          >
-            Save key
-          </button>
-          <button
-            type="button"
-            onClick={() => setProvider(p => p === 'anthropic' ? 'openai' : 'anthropic')}
-            className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors -mt-2"
-          >
-            {provider === 'anthropic' ? 'Using OpenAI instead?' : 'Using Anthropic instead?'}
-          </button>
-          <p className="text-xs text-neutral-600 text-center -mt-1">
-            No API key?{' '}
-            <a href="https://ollama.com" target="_blank" rel="noreferrer"
-              className="text-neutral-500 hover:text-neutral-400 transition-colors underline">
-              Run Ollama locally
-            </a>{' '}
-            for free.
-          </p>
-        </form>
+        <div className="flex-1 flex flex-col justify-center px-5 gap-6">
+
+          {/* Provider list */}
+          <div className="flex flex-col">
+            {([
+              { id: 'openrouter', label: 'OpenRouter', sub: 'Free · no card required' },
+              { id: 'anthropic',  label: 'Anthropic',  sub: 'Claude' },
+              { id: 'openai',     label: 'OpenAI',     sub: 'GPT-4' },
+            ] as const).map(({ id, label, sub }) => (
+              <button
+                key={id}
+                onClick={() => setProvider(id)}
+                className={`flex items-center justify-between px-3 py-2.5 text-sm transition-colors border-l-2 rounded-r ${
+                  provider === id
+                    ? 'border-[#b685ff] text-neutral-100 bg-neutral-900'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'
+                }`}
+              >
+                <span>{label}</span>
+                <span className={`text-xs ${provider === id ? 'text-neutral-400' : 'text-neutral-600'}`}>{sub}</span>
+              </button>
+            ))}
+            <button
+              onClick={() => setProvider('ollama')}
+              className={`flex items-center justify-between px-3 py-2.5 text-sm transition-colors border-l-2 rounded-r ${
+                provider === 'ollama'
+                  ? 'border-[#b685ff] text-neutral-100 bg-neutral-900'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'
+              }`}
+            >
+              <span>Ollama</span>
+              <span className={`text-xs ${provider === 'ollama' ? 'text-neutral-400' : 'text-neutral-700'}`}>Not running</span>
+            </button>
+          </div>
+
+          {/* Separator */}
+          <div className="h-px bg-neutral-800" />
+
+          {/* Action area */}
+          {provider === 'ollama' ? (
+            <div className="flex flex-col gap-4 px-3 py-2">
+              <a href="https://ollama.com" target="_blank" rel="noreferrer"
+                className="text-xs inline-flex items-center gap-1 transition-colors" style={{ color: '#b685ff' }}>
+                Download at ollama.com
+                <ExternalLinkIcon />
+              </a>
+              <p className="text-xs text-neutral-500">Ollama runs AI locally — free, no key needed.</p>
+            </div>
+          ) : (
+            <form onSubmit={saveKey} className="flex flex-col gap-3 px-3">
+              {provider === 'openrouter' ? (
+                <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer"
+                  className="text-xs inline-flex items-center gap-1 transition-colors" style={{ color: '#b685ff' }}>
+                  Get a key on openrouter.ai
+                  <ExternalLinkIcon />
+                </a>
+              ) : (
+                <a
+                  href={provider === 'anthropic' ? 'https://console.anthropic.com/settings/keys' : 'https://platform.openai.com/api-keys'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors inline-flex items-center gap-1"
+                >
+                  {provider === 'anthropic' ? 'Anthropic API key' : 'OpenAI API key'}
+                  <ExternalLinkIcon />
+                </a>
+              )}
+              <input
+                type="password"
+                value={keyInput}
+                onChange={e => setKeyInput(e.target.value)}
+                placeholder={
+                  provider === 'openrouter' ? 'sk-or-…'
+                  : provider === 'anthropic' ? 'sk-ant-…'
+                  : 'sk-…'
+                }
+                className="bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500 transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={!keyInput.trim()}
+                className="py-2 rounded bg-neutral-800 text-neutral-200 text-sm hover:bg-neutral-700 transition-colors disabled:opacity-40"
+              >
+                Save key
+              </button>
+            </form>
+          )}
+
+        </div>
       ) : (
         <>
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
