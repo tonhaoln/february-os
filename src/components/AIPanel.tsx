@@ -16,6 +16,8 @@ interface Message {
   content: string
 }
 
+const TEXTAREA_MAX_HEIGHT = 124
+
 function ExternalLinkIcon() {
   return (
     <svg width="11" height="11" viewBox="0 0 11 11" fill="none" style={{ flexShrink: 0 }}>
@@ -122,7 +124,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
     const el = textareaRef.current
     if (!el) return
     el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 124) + 'px'
+    el.style.height = Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT) + 'px'
   }
 
 
@@ -324,7 +326,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             onClick={() => setShowProviderMenu(v => !v)}
             className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors group flex-1 min-w-0"
           >
-            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#b685ff' }} />
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-accent" />
             <span className="truncate">
               {provider === 'anthropic' ? 'Claude' : provider === 'openai' ? 'OpenAI' : provider === 'openrouter' ? 'OpenRouter' : 'Ollama'}
             </span>
@@ -378,7 +380,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             </form>
           ) : provider === 'anthropic' ? (
             <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-[#b685ff] text-neutral-100">Claude</div>
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent text-neutral-100">Claude</div>
               <div className="w-28 border-l border-neutral-800 flex items-center px-3">
                 <button onClick={() => removeKey('anthropic')} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
               </div>
@@ -413,7 +415,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             </form>
           ) : provider === 'openai' ? (
             <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-[#b685ff] text-neutral-100">OpenAI</div>
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent text-neutral-100">OpenAI</div>
               <div className="w-28 border-l border-neutral-800 flex items-center px-3">
                 <button onClick={() => removeKey('openai')} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
               </div>
@@ -448,7 +450,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             </form>
           ) : provider === 'openrouter' ? (
             <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-[#b685ff] text-neutral-100">OpenRouter</div>
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent text-neutral-100">OpenRouter</div>
               <div className="w-28 border-l border-neutral-800 flex items-center px-3">
                 <button onClick={() => removeKey('openrouter')} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
               </div>
@@ -478,7 +480,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
           {/* Ollama row */}
           {provider === 'ollama' ? (
             <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center justify-between px-4 py-2.5 text-sm border-l-2 border-[#b685ff] text-neutral-100">
+              <div className="flex-1 flex items-center justify-between px-4 py-2.5 text-sm border-l-2 border-accent text-neutral-100">
                 <span>Ollama</span>
                 {ollamaModels[0] && <span className="text-xs text-neutral-500 pr-2">{ollamaModels[0]}</span>}
               </div>
@@ -544,7 +546,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
                 onClick={() => setProvider(id)}
                 className={`flex items-center justify-between px-3 py-2.5 text-sm transition-colors border-l-2 rounded-r ${
                   provider === id
-                    ? 'border-[#b685ff] text-neutral-100 bg-neutral-900'
+                    ? 'border-accent text-neutral-100 bg-neutral-900'
                     : 'border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'
                 }`}
               >
@@ -556,7 +558,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               onClick={() => setProvider('ollama')}
               className={`flex items-center justify-between px-3 py-2.5 text-sm transition-colors border-l-2 rounded-r ${
                 provider === 'ollama'
-                  ? 'border-[#b685ff] text-neutral-100 bg-neutral-900'
+                  ? 'border-accent text-neutral-100 bg-neutral-900'
                   : 'border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'
               }`}
             >
@@ -572,7 +574,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
           {provider === 'ollama' ? (
             <div className="flex flex-col gap-4 px-3 py-2">
               <a href="https://ollama.com" target="_blank" rel="noreferrer"
-                className="text-xs inline-flex items-center gap-1 transition-colors" style={{ color: '#b685ff' }}>
+                className="text-xs inline-flex items-center gap-1 transition-colors text-accent">
                 Download at ollama.com
                 <ExternalLinkIcon />
               </a>
@@ -582,7 +584,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             <form onSubmit={saveKey} className="flex flex-col gap-3 px-3">
               {provider === 'openrouter' ? (
                 <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer"
-                  className="text-xs inline-flex items-center gap-1 transition-colors" style={{ color: '#b685ff' }}>
+                  className="text-xs inline-flex items-center gap-1 transition-colors text-accent">
                   Get a key on openrouter.ai
                   <ExternalLinkIcon />
                 </a>
@@ -680,8 +682,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               <div ref={contextPromptRef} className="flex flex-col items-center gap-1.5 pt-1 pb-4">
                 <button
                   onClick={suggestContextUpdate}
-                  className="text-xs border rounded px-3 py-1.5 transition-colors"
-                  style={{ color: '#b685ff', borderColor: '#b685ff44' }}
+                  className="text-xs border rounded px-3 py-1.5 transition-colors text-accent border-accent/25"
                 >
                   Update your context?
                 </button>
@@ -801,7 +802,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               disabled={isLoading}
               rows={1}
               className="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-600 disabled:opacity-50 resize-none overflow-y-auto leading-relaxed"
-              style={{ maxHeight: '124px' }}
+              style={{ maxHeight: TEXTAREA_MAX_HEIGHT }}
             />
             {isLoading ? (
               <button
@@ -816,8 +817,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               <button
                 onClick={send}
                 disabled={!inputValue.trim()}
-                className="px-3 py-2 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-40 flex-shrink-0"
-                style={{ color: '#b685ff' }}
+                className="px-3 py-2 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-40 flex-shrink-0 text-accent"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M7 12V2M3 6l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

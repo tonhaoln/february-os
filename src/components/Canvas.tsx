@@ -165,7 +165,7 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
                       {suggestion.improved}
                     </div>
                     <div className="flex border-t border-neutral-700">
-                      <button onClick={acceptSuggestion} className="flex-1 px-3 py-2 text-xs text-[#b685ff] hover:bg-neutral-700 transition-colors rounded-bl">
+                      <button onClick={acceptSuggestion} className="flex-1 px-3 py-2 text-xs text-accent hover:bg-neutral-700 transition-colors rounded-bl">
                         Accept
                       </button>
                       <div className="w-px bg-neutral-700" />
@@ -227,7 +227,7 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
                     <button
                       onClick={handleImprove}
                       disabled={improving}
-                      className="px-2.5 py-1.5 text-xs transition-colors text-[#b685ff] hover:text-[#c9a5ff]"
+                      className="px-2.5 py-1.5 text-xs transition-colors text-accent hover:text-accent-hover"
                     >Improve</button>
                   </div>
                 )}
