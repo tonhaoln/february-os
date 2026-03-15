@@ -15,16 +15,16 @@ html, body, #root {
   outline: none;
 }
 
-.tiptap p { @apply text-neutral-200 leading-relaxed; }
-.tiptap h1 { @apply text-2xl font-semibold text-white mb-2 mt-6; }
-.tiptap h2 { @apply text-xl font-semibold text-white mb-2 mt-5; }
-.tiptap h3 { @apply text-lg font-semibold text-white mb-1 mt-4; }
-.tiptap ul { @apply list-disc pl-5 text-neutral-200; }
-.tiptap ol { @apply list-decimal pl-5 text-neutral-200; }
+.tiptap p { @apply text-neutral-200 leading-relaxed mb-4; }
+.tiptap h1 { @apply text-2xl font-semibold text-white mb-3 mt-6; }
+.tiptap h2 { @apply text-xl font-semibold text-white mb-3 mt-5; }
+.tiptap h3 { @apply text-lg font-semibold text-white mb-2 mt-4; }
+.tiptap ul { @apply list-disc pl-5 text-neutral-200 mb-4; }
+.tiptap ol { @apply list-decimal pl-5 text-neutral-200 mb-4; }
 .tiptap li { @apply mb-1; }
 .tiptap strong { @apply font-semibold text-white; }
 .tiptap em { @apply italic; }
-.tiptap blockquote { @apply border-l-2 border-neutral-600 pl-4 text-neutral-400 italic; }
+.tiptap blockquote { @apply border-l-2 border-neutral-600 pl-4 text-neutral-400 italic mb-4 mt-4; }
 .tiptap code { @apply font-mono text-sm bg-neutral-800 px-1 rounded text-neutral-300; }
 .tiptap .ProseMirror-focused { caret-color: theme('colors.accent.DEFAULT'); }
 
