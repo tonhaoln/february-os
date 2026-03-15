@@ -21,6 +21,7 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
   const [title, setTitle] = useState('')
   const [improving, setImproving] = useState(false)
   const [suggestion, setSuggestion] = useState<{ from: number; to: number; improved: string } | null>(null)
+  const [copiedSuggestion, setCopiedSuggestion] = useState(false)
   const suggestionRef = useRef(suggestion)
   suggestionRef.current = suggestion
 
@@ -69,14 +70,15 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
     if (!editor || improving) return
     const { from, to } = editor.state.selection
     if (from === to) return
-    const selectedText = editor.state.doc.textBetween(from, to, ' ')
-    if (!selectedText.trim()) return
+    const slice = editor.state.doc.slice(from, to)
+    const selectedMarkdown = editor.storage.markdown.serializer.serialize(slice.content)
+    if (!selectedMarkdown.trim()) return
     setImproving(true)
     try {
       const res = await fetch('/api/improve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: selectedText }),
+        body: JSON.stringify({ text: selectedMarkdown }),
       })
       const data = await res.json()
       if (data.improved) {
@@ -93,6 +95,38 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
     if (!editor || !suggestion) return
     editor.chain().focus().insertContentAt({ from: suggestion.from, to: suggestion.to }, suggestion.improved).run()
     setSuggestion(null)
+  }
+
+  async function handleReimprove() {
+    if (!editor || !suggestion || improving) return
+    const { from, to } = suggestion
+    const slice = editor.state.doc.slice(from, to)
+    const text = editor.storage.markdown.serializer.serialize(slice.content)
+    if (!text.trim()) return
+    setSuggestion(null)
+    setImproving(true)
+    try {
+      const res = await fetch('/api/improve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      const data = await res.json()
+      if (data.improved) {
+        setSuggestion({ from, to, improved: data.improved })
+      }
+    } catch {
+      // Silent
+    } finally {
+      setImproving(false)
+    }
+  }
+
+  function copySuggestion() {
+    if (!suggestion) return
+    navigator.clipboard.writeText(suggestion.improved)
+    setCopiedSuggestion(true)
+    setTimeout(() => setCopiedSuggestion(false), 1500)
   }
 
   function dismissSuggestion() {
@@ -157,16 +191,36 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
             {editor && (
               <BubbleMenu
                 editor={editor}
-                tippyOptions={{ duration: 100 }}
+                tippyOptions={{ duration: 100, placement: 'bottom-start', popperOptions: { modifiers: [{ name: 'preventOverflow', options: { boundary: 'viewport', padding: 8 } }, { name: 'flip', options: { fallbackPlacements: ['top-start', 'bottom-start'] } }] } }}
               >
                 {suggestion ? (
                   <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow-lg min-w-[280px] max-w-md">
-                    <div className="px-3 py-2 text-sm text-neutral-800 dark:text-neutral-200 max-h-[200px] overflow-y-auto whitespace-pre-wrap">
+                    <div className="px-3 py-2 text-sm text-neutral-800 dark:text-neutral-200 max-h-[150px] overflow-y-auto whitespace-pre-wrap">
                       {suggestion.improved}
                     </div>
                     <div className="flex border-t border-neutral-200 dark:border-neutral-700">
                       <button onClick={acceptSuggestion} className="flex-1 px-3 py-2 text-xs text-accent dark:text-accent-soft hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors rounded-bl">
                         Accept
+                      </button>
+                      <div className="w-px bg-neutral-200 dark:bg-neutral-700" />
+                      <button onClick={handleReimprove} className="px-3 py-2 text-xs text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors" title="Regenerate">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M1 6a5 5 0 019-3M11 6a5 5 0 01-9 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                          <path d="M10 1v2h-2M2 11V9h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      <div className="w-px bg-neutral-200 dark:bg-neutral-700" />
+                      <button onClick={copySuggestion} className="px-3 py-2 text-xs text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors" title="Copy">
+                        {copiedSuggestion ? (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        ) : (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <rect x="1" y="3" width="7" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                            <path d="M4 3V2a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H8" stroke="currentColor" strokeWidth="1.2"/>
+                          </svg>
+                        )}
                       </button>
                       <div className="w-px bg-neutral-200 dark:bg-neutral-700" />
                       <button onClick={dismissSuggestion} className="flex-1 px-3 py-2 text-xs text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors rounded-br">

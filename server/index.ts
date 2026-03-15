@@ -301,7 +301,10 @@ app.post('/api/improve', async (req, res) => {
   const { provider, ollamaModel } = await detectProvider()
   const model = selectModel(provider, ollamaModel)
 
-  const prompt = `Fix spelling, grammar, and clarity in the following text. Preserve the author's voice and intent. Do not add or remove ideas. Do not wrap in quotes or code fences. Return only the improved text.\n\n${text}`
+  const context = fs.existsSync(CONTEXT_FILE) ? fs.readFileSync(CONTEXT_FILE, 'utf-8').trim() : ''
+  const contextSection = context ? `\n\nThe author's context:\n${context}\n` : ''
+
+  const prompt = `You are a copy editor, not a rewriter. Fix spelling, grammar, and clarity in the following text. Preserve the author's voice and intent. Preserve the original formatting including line breaks, lists, and structure. Do not add or remove ideas. Do not wrap in quotes or code fences. Return only the improved text.${contextSection}\n\nText to improve:\n${text}`
 
   try {
     const result = await generateText({ model, prompt })
