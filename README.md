@@ -6,7 +6,7 @@ February is a local-first interface for externalising your context. Markdown fil
 
 Not a RAG tool. You're not searching fragments — you're handing the AI a curated document it can actually read.
 
-<video src="https://github.com/tonhaoln/february-os/raw/main/screenshots/february.mp4" width="100%" controls muted></video>
+https://github.com/user-attachments/assets/7ffdd583-94e6-4a05-a7dc-e2c52b1f3773
 
 ---
 
