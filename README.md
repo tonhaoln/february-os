@@ -6,7 +6,7 @@ February is a local-first interface for externalising your context. Markdown fil
 
 Not a RAG tool. You're not searching fragments — you're handing the AI a curated document it can actually read.
 
-![February](screenshots/february.png)
+<video src="screenshots/february.mp4" width="100%" autoplay muted loop playsinline></video>
 
 ---
 
