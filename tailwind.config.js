@@ -6,8 +6,10 @@ export default {
     extend: {
       colors: {
         accent: {
-          DEFAULT: '#b685ff',
-          hover: '#c9a5ff',
+          DEFAULT: '#8b5cf6',
+          hover: '#7c3aed',
+          soft: '#b685ff',
+          'soft-hover': '#c9a5ff',
         },
         surface: '#0f0e0b',
       },

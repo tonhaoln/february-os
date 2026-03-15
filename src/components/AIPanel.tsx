@@ -310,27 +310,27 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
   return (
     <aside
       style={{ width: panelWidth, display: open ? 'flex' : 'none' }}
-      className="relative flex-shrink-0 flex-col border-l border-neutral-800 bg-neutral-950"
+      className="relative flex-shrink-0 flex-col border-l border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950"
     >
       {/* Drag handle */}
       <div
         onMouseDown={onDragStart}
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-neutral-700 transition-colors z-10"
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors z-10"
       />
 
       {/* Header */}
-      <div className="flex items-center px-3 h-11 flex-shrink-0 border-b border-neutral-800 gap-2">
+      <div className="flex items-center px-3 h-11 flex-shrink-0 border-b border-neutral-200 dark:border-neutral-800 gap-2">
         {(hasKey || hasOllama) ? (
           <button
             ref={providerButtonRef}
             onClick={() => setShowProviderMenu(v => !v)}
-            className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors group flex-1 min-w-0"
+            className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors group flex-1 min-w-0"
           >
-            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-accent" />
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-accent dark:bg-accent-soft" />
             <span className="truncate">
               {provider === 'anthropic' ? 'Claude' : provider === 'openai' ? 'OpenAI' : provider === 'openrouter' ? 'OpenRouter' : 'Ollama'}
             </span>
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0 text-neutral-600 group-hover:text-neutral-400 transition-colors">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0 text-neutral-400 dark:text-neutral-600 group-hover:text-neutral-500 dark:group-hover:text-neutral-400 transition-colors">
               <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
@@ -341,20 +341,20 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
         <div className="flex items-center gap-0.5">
           {(hasKey || hasOllama) && (
             <button onClick={clearChat} title="New chat"
-              className="p-2 text-neutral-600 hover:text-neutral-300 transition-colors rounded">
+              className="p-2 text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors rounded">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M9.5 2.5L11.5 4.5L5 11H3V9L9.5 2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
           )}
           <button onClick={onExpand} title="Expand"
-            className="p-2 text-neutral-600 hover:text-neutral-300 transition-colors rounded">
+            className="p-2 text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors rounded">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2 5V2H5M9 2H12V5M12 9V12H9M5 12H2V9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
           <button onClick={onClose} title="Close"
-            className="p-2 text-neutral-600 hover:text-neutral-300 transition-colors rounded">
+            className="p-2 text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors rounded">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M3 3L11 11M11 3L3 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
@@ -364,161 +364,161 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
 
       {/* Provider menu */}
       {showProviderMenu && (
-        <div ref={menuRef} className="border-b border-neutral-800 pb-2">
+        <div ref={menuRef} className="border-b border-neutral-200 dark:border-neutral-800 pb-2">
 
           {/* Anthropic row */}
           {addingFor === 'anthropic' ? (
-            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-4 py-2 border-b border-neutral-800 last:border-0">
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 last:border-0">
               <input type="password" value={addKeyInput} onChange={e => setAddKeyInput(e.target.value)}
                 placeholder="sk-ant-…"
-                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-neutral-500"
                 autoFocus />
               <button type="submit" disabled={!addKeyInput.trim()}
-                className="text-xs px-2 py-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                className="text-xs px-2 py-1.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40">
                 Save
               </button>
             </form>
           ) : provider === 'anthropic' ? (
-            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent text-neutral-100">Claude</div>
-              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
-                <button onClick={() => removeKey('anthropic')} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+            <div className="flex items-stretch border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent dark:border-accent-soft text-neutral-900 dark:text-neutral-100">Claude</div>
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                <button onClick={() => removeKey('anthropic')} className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">remove key</button>
               </div>
             </div>
           ) : hasAnthropic ? (
-            <div onClick={() => switchProvider('anthropic')} className="flex items-stretch cursor-pointer hover:bg-neutral-900 transition-colors border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-100">Claude</div>
-              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
-                <button onClick={e => { e.stopPropagation(); removeKey('anthropic') }} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+            <div onClick={() => switchProvider('anthropic')} className="flex items-stretch cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-900 dark:text-neutral-100">Claude</div>
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                <button onClick={e => { e.stopPropagation(); removeKey('anthropic') }} className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">remove key</button>
               </div>
             </div>
           ) : (
-            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-600">Claude</div>
-              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
-                <button onClick={() => setAddingFor('anthropic')} className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">add key</button>
+            <div className="flex items-stretch border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-400 dark:text-neutral-600">Claude</div>
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                <button onClick={() => setAddingFor('anthropic')} className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors">add key</button>
               </div>
             </div>
           )}
 
           {/* OpenAI row */}
           {addingFor === 'openai' ? (
-            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-4 py-2 border-b border-neutral-800 last:border-0">
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 last:border-0">
               <input type="password" value={addKeyInput} onChange={e => setAddKeyInput(e.target.value)}
                 placeholder="sk-…"
-                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-neutral-500"
                 autoFocus />
               <button type="submit" disabled={!addKeyInput.trim()}
-                className="text-xs px-2 py-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                className="text-xs px-2 py-1.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40">
                 Save
               </button>
             </form>
           ) : provider === 'openai' ? (
-            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent text-neutral-100">OpenAI</div>
-              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
-                <button onClick={() => removeKey('openai')} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+            <div className="flex items-stretch border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent dark:border-accent-soft text-neutral-900 dark:text-neutral-100">OpenAI</div>
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                <button onClick={() => removeKey('openai')} className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">remove key</button>
               </div>
             </div>
           ) : hasOpenAI ? (
-            <div onClick={() => switchProvider('openai')} className="flex items-stretch cursor-pointer hover:bg-neutral-900 transition-colors border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-100">OpenAI</div>
-              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
-                <button onClick={e => { e.stopPropagation(); removeKey('openai') }} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+            <div onClick={() => switchProvider('openai')} className="flex items-stretch cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-900 dark:text-neutral-100">OpenAI</div>
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                <button onClick={e => { e.stopPropagation(); removeKey('openai') }} className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">remove key</button>
               </div>
             </div>
           ) : (
-            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-600">OpenAI</div>
-              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
-                <button onClick={() => setAddingFor('openai')} className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">add key</button>
+            <div className="flex items-stretch border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-400 dark:text-neutral-600">OpenAI</div>
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                <button onClick={() => setAddingFor('openai')} className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors">add key</button>
               </div>
             </div>
           )}
 
           {/* OpenRouter row */}
           {addingFor === 'openrouter' ? (
-            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-4 py-2 border-b border-neutral-800 last:border-0">
+            <form onSubmit={saveAdditionalKey} className="flex gap-2 px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 last:border-0">
               <input type="password" value={addKeyInput} onChange={e => setAddKeyInput(e.target.value)}
                 placeholder="sk-or-…"
-                className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500"
+                className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded px-2 py-1.5 text-xs text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-neutral-500"
                 autoFocus />
               <button type="submit" disabled={!addKeyInput.trim()}
-                className="text-xs px-2 py-1.5 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors disabled:opacity-40">
+                className="text-xs px-2 py-1.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40">
                 Save
               </button>
             </form>
           ) : provider === 'openrouter' ? (
-            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent text-neutral-100">OpenRouter</div>
-              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
-                <button onClick={() => removeKey('openrouter')} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+            <div className="flex items-stretch border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent dark:border-accent-soft text-neutral-900 dark:text-neutral-100">OpenRouter</div>
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                <button onClick={() => removeKey('openrouter')} className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">remove key</button>
               </div>
             </div>
           ) : hasOpenRouter ? (
-            <div onClick={() => switchProvider('openrouter')} className="flex items-stretch cursor-pointer hover:bg-neutral-900 transition-colors border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-100">OpenRouter</div>
-              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
-                <button onClick={e => { e.stopPropagation(); removeKey('openrouter') }} className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors">remove key</button>
+            <div onClick={() => switchProvider('openrouter')} className="flex items-stretch cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-900 dark:text-neutral-100">OpenRouter</div>
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                <button onClick={e => { e.stopPropagation(); removeKey('openrouter') }} className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">remove key</button>
               </div>
             </div>
           ) : (
-            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
+            <div className="flex items-stretch border-b border-neutral-200 dark:border-neutral-800 last:border-0">
               <div className="flex-1 flex flex-col justify-center px-4 py-2.5 border-l-2 border-transparent gap-0.5">
-                <span className="text-sm text-neutral-600">OpenRouter</span>
+                <span className="text-sm text-neutral-400 dark:text-neutral-600">OpenRouter</span>
                 <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer"
-                  className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors inline-flex items-center gap-1">
+                  className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors inline-flex items-center gap-1">
                   Free · no card required <ExternalLinkIcon />
                 </a>
               </div>
-              <div className="w-28 border-l border-neutral-800 flex items-center px-3">
-                <button onClick={() => setAddingFor('openrouter')} className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">add key</button>
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                <button onClick={() => setAddingFor('openrouter')} className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors">add key</button>
               </div>
             </div>
           )}
 
           {/* Ollama row */}
           {provider === 'ollama' ? (
-            <div className="flex items-stretch border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center justify-between px-4 py-2.5 text-sm border-l-2 border-accent text-neutral-100">
+            <div className="flex items-stretch border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center justify-between px-4 py-2.5 text-sm border-l-2 border-accent dark:border-accent-soft text-neutral-900 dark:text-neutral-100">
                 <span>Ollama</span>
                 {ollamaModels[0] && <span className="text-xs text-neutral-500 pr-2">{ollamaModels[0]}</span>}
               </div>
-              <div className="w-28 border-l border-neutral-800" />
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800" />
             </div>
           ) : hasOllama && ollamaModels.length > 0 ? (
-            <div onClick={() => switchProvider('ollama')} className="flex items-stretch cursor-pointer hover:bg-neutral-900 transition-colors border-b border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center justify-between px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-100">
+            <div onClick={() => switchProvider('ollama')} className="flex items-stretch cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex-1 flex items-center justify-between px-4 py-2.5 text-sm border-l-2 border-transparent text-neutral-900 dark:text-neutral-100">
                 <span>Ollama</span>
-                <span className="text-xs text-neutral-600 pr-2">{ollamaModels[0]}</span>
+                <span className="text-xs text-neutral-400 dark:text-neutral-600 pr-2">{ollamaModels[0]}</span>
               </div>
-              <div className="w-28 border-l border-neutral-800" />
+              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800" />
             </div>
           ) : hasOllama ? (
-            <div className="flex flex-col px-4 py-2.5 gap-1.5 border-l-2 border-transparent border-b border-neutral-800 last:border-b-0">
-              <span className="text-sm text-neutral-600">Ollama</span>
-              <span className="text-xs text-neutral-600">Run this in your terminal:</span>
+            <div className="flex flex-col px-4 py-2.5 gap-1.5 border-l-2 border-transparent border-b border-neutral-200 dark:border-neutral-800 last:border-b-0">
+              <span className="text-sm text-neutral-400 dark:text-neutral-600">Ollama</span>
+              <span className="text-xs text-neutral-400 dark:text-neutral-600">Run this in your terminal:</span>
               <div className="flex items-center gap-1">
-                <code className="flex-1 text-xs text-neutral-400 font-mono bg-neutral-900 px-2 py-1 rounded">ollama pull llama3.2</code>
+                <code className="flex-1 text-xs text-neutral-600 dark:text-neutral-400 font-mono bg-neutral-200 dark:bg-neutral-900 px-2 py-1 rounded">ollama pull llama3.2</code>
                 <button onClick={() => navigator.clipboard.writeText('ollama pull llama3.2')}
-                  className="p-1 text-neutral-600 hover:text-neutral-400 transition-colors flex-shrink-0" title="Copy">
+                  className="p-1 text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors flex-shrink-0" title="Copy">
                   <CopyIcon />
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col px-4 py-2.5 gap-2 border-l-2 border-transparent border-b border-neutral-800 last:border-b-0">
-              <span className="text-sm text-neutral-600">Ollama</span>
-              <span className="text-xs text-neutral-600">Not running — open the app or:</span>
+            <div className="flex flex-col px-4 py-2.5 gap-2 border-l-2 border-transparent border-b border-neutral-200 dark:border-neutral-800 last:border-b-0">
+              <span className="text-sm text-neutral-400 dark:text-neutral-600">Ollama</span>
+              <span className="text-xs text-neutral-400 dark:text-neutral-600">Not running — open the app or:</span>
               <div className="flex items-center gap-1">
-                <code className="flex-1 text-xs text-neutral-400 font-mono bg-neutral-900 px-2 py-1 rounded">ollama serve</code>
+                <code className="flex-1 text-xs text-neutral-600 dark:text-neutral-400 font-mono bg-neutral-200 dark:bg-neutral-900 px-2 py-1 rounded">ollama serve</code>
                 <button onClick={() => navigator.clipboard.writeText('ollama serve')}
-                  className="p-1 text-neutral-600 hover:text-neutral-400 transition-colors flex-shrink-0" title="Copy">
+                  className="p-1 text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors flex-shrink-0" title="Copy">
                   <CopyIcon />
                 </button>
               </div>
               <a href="https://ollama.com" target="_blank" rel="noreferrer"
-                className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors inline-flex items-center gap-1">
+                className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors inline-flex items-center gap-1">
                 Download at ollama.com <ExternalLinkIcon />
               </a>
             </div>
@@ -529,7 +529,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
 
       {hasKey === null ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-xs text-neutral-600">Loading…</p>
+          <p className="text-xs text-neutral-400 dark:text-neutral-600">Loading…</p>
         </div>
       ) : !hasKey && !hasOllama ? (
         <div className="flex-1 flex flex-col justify-center px-5 gap-6">
@@ -546,35 +546,35 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
                 onClick={() => setProvider(id)}
                 className={`flex items-center justify-between px-3 py-2.5 text-sm transition-colors border-l-2 rounded-r ${
                   provider === id
-                    ? 'border-accent text-neutral-100 bg-neutral-900'
-                    : 'border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'
+                    ? 'border-accent dark:border-accent-soft text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-900'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-900'
                 }`}
               >
                 <span>{label}</span>
-                <span className={`text-xs ${provider === id ? 'text-neutral-400' : 'text-neutral-600'}`}>{sub}</span>
+                <span className={`text-xs ${provider === id ? 'text-neutral-500 dark:text-neutral-400' : 'text-neutral-400 dark:text-neutral-600'}`}>{sub}</span>
               </button>
             ))}
             <button
               onClick={() => setProvider('ollama')}
               className={`flex items-center justify-between px-3 py-2.5 text-sm transition-colors border-l-2 rounded-r ${
                 provider === 'ollama'
-                  ? 'border-accent text-neutral-100 bg-neutral-900'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'
+                  ? 'border-accent dark:border-accent-soft text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-900'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-900'
               }`}
             >
               <span>Ollama</span>
-              <span className={`text-xs ${provider === 'ollama' ? 'text-neutral-400' : 'text-neutral-700'}`}>Not running</span>
+              <span className={`text-xs ${provider === 'ollama' ? 'text-neutral-500 dark:text-neutral-400' : 'text-neutral-400 dark:text-neutral-700'}`}>Not running</span>
             </button>
           </div>
 
           {/* Separator */}
-          <div className="h-px bg-neutral-800" />
+          <div className="h-px bg-neutral-200 dark:bg-neutral-800" />
 
           {/* Action area */}
           {provider === 'ollama' ? (
             <div className="flex flex-col gap-4 px-3 py-2">
               <a href="https://ollama.com" target="_blank" rel="noreferrer"
-                className="text-xs inline-flex items-center gap-1 transition-colors text-accent">
+                className="text-xs inline-flex items-center gap-1 transition-colors text-accent dark:text-accent-soft">
                 Download at ollama.com
                 <ExternalLinkIcon />
               </a>
@@ -584,7 +584,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             <form onSubmit={saveKey} className="flex flex-col gap-3 px-3">
               {provider === 'openrouter' ? (
                 <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer"
-                  className="text-xs inline-flex items-center gap-1 transition-colors text-accent">
+                  className="text-xs inline-flex items-center gap-1 transition-colors text-accent dark:text-accent-soft">
                   Get a key on openrouter.ai
                   <ExternalLinkIcon />
                 </a>
@@ -593,7 +593,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
                   href={provider === 'anthropic' ? 'https://console.anthropic.com/settings/keys' : 'https://platform.openai.com/api-keys'}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors inline-flex items-center gap-1"
+                  className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors inline-flex items-center gap-1"
                 >
                   {provider === 'anthropic' ? 'Anthropic API key' : 'OpenAI API key'}
                   <ExternalLinkIcon />
@@ -608,12 +608,12 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
                   : provider === 'anthropic' ? 'sk-ant-…'
                   : 'sk-…'
                 }
-                className="bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-500 transition-colors"
+                className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded px-3 py-2 text-sm text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-neutral-500 transition-colors"
               />
               <button
                 type="submit"
                 disabled={!keyInput.trim()}
-                className="py-2 rounded bg-neutral-800 text-neutral-200 text-sm hover:bg-neutral-700 transition-colors disabled:opacity-40"
+                className="py-2 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-sm hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40"
               >
                 Save key
               </button>
@@ -634,9 +634,9 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             {messages.map((m, i) => {
               if (m.role === 'divider') return (
                 <div key={i} className="flex items-center gap-2 py-1">
-                  <div className="flex-1 h-px bg-neutral-800" />
-                  <span className="text-xs text-neutral-600">{m.content}</span>
-                  <div className="flex-1 h-px bg-neutral-800" />
+                  <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+                  <span className="text-xs text-neutral-400 dark:text-neutral-600">{m.content}</span>
+                  <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
                 </div>
               )
               const isStreamingMsg = isLoading && i === messages.length - 1 && m.role === 'assistant'
@@ -644,7 +644,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
                 <div key={i} ref={isStreamingMsg ? newResponseRef : null}
                   className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
                   <div className={`relative max-w-[85%] rounded px-3 py-2 text-sm leading-relaxed ${
-                    m.role === 'user' ? 'bg-neutral-800 text-neutral-200 whitespace-pre-wrap' : 'text-neutral-300'
+                    m.role === 'user' ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 whitespace-pre-wrap' : 'text-neutral-700 dark:text-neutral-300'
                   }`}>
                     {m.role === 'assistant'
                       ? <div className="ai-prose"><ReactMarkdown>{m.content}</ReactMarkdown></div>
@@ -657,7 +657,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
                           setCopiedIndex(i)
                           setTimeout(() => setCopiedIndex(null), 1500)
                         }}
-                        className="absolute -bottom-8 left-0 p-1.5 rounded text-neutral-600 hover:text-neutral-400 transition-colors bg-neutral-900 border border-neutral-800"
+                        className="absolute -bottom-8 left-0 p-1.5 rounded text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
                       >
                         {copiedIndex === i ? <CheckIcon /> : <CopyIcon />}
                       </button>
@@ -668,11 +668,11 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             })}
             {isLoading && messages[messages.length - 1]?.content === '' && (
               <div className="flex justify-start">
-                <div className="text-neutral-600 text-sm px-1">…</div>
+                <div className="text-neutral-400 dark:text-neutral-600 text-sm px-1">…</div>
               </div>
             )}
             {isLoading && (provider === 'ollama' || provider === 'openrouter') && (
-              <p className="text-xs text-neutral-600 px-1">
+              <p className="text-xs text-neutral-400 dark:text-neutral-600 px-1">
                 {provider === 'ollama'
                   ? 'Running locally — this may take a moment.'
                   : 'Free tier — this may take a moment.'}
@@ -682,36 +682,36 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               <div ref={contextPromptRef} className="flex flex-col items-center gap-1.5 pt-1 pb-4">
                 <button
                   onClick={suggestContextUpdate}
-                  className="text-xs border rounded px-3 py-1.5 transition-colors text-accent border-accent/25"
+                  className="text-xs border rounded px-3 py-1.5 transition-colors text-accent dark:text-accent-soft border-accent/25 dark:border-accent-soft/25"
                 >
                   Update your context?
                 </button>
-                <p className="text-xs text-neutral-700 text-center leading-relaxed">
+                <p className="text-xs text-neutral-400 dark:text-neutral-700 text-center leading-relaxed">
                   After a few exchanges, February can suggest<br />updates to keep your context current.
                 </p>
               </div>
             )}
             {contextState === 'loading' && (
               <div className="flex justify-center pt-1">
-                <p className="text-xs text-neutral-600">Reviewing your context…</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-600">Reviewing your context…</p>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
           {contextState === 'review' && contextDiff !== null && (
-            <div className="border-t border-neutral-800 flex flex-col">
+            <div className="border-t border-neutral-200 dark:border-neutral-800 flex flex-col">
               <div className="px-4 py-2 flex items-center justify-between">
-                <span className="text-xs text-neutral-400 font-medium">Does this still sound like you?</span>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">Does this still sound like you?</span>
                 <button
                   onClick={() => setShowDiff(v => !v)}
-                  className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                  className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
                 >
                   {showDiff ? 'Hide diff' : 'Show diff'}
                 </button>
               </div>
               {!showDiff && (
-                <div className="overflow-y-auto max-h-48 px-4 pb-2 text-xs text-neutral-300 leading-5 whitespace-pre-wrap">
+                <div className="overflow-y-auto max-h-48 px-4 pb-2 text-xs text-neutral-700 dark:text-neutral-300 leading-5 whitespace-pre-wrap">
                   {contextDiff.suggested}
                 </div>
               )}
@@ -723,9 +723,9 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
                         key={i}
                         className={
                           line.type === 'added'
-                            ? 'bg-green-950 text-green-300 px-2'
+                            ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 px-2'
                             : line.type === 'removed'
-                            ? 'bg-red-950 text-red-400 px-2 line-through opacity-60'
+                            ? 'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 px-2 line-through opacity-60'
                             : 'text-neutral-500 px-2'
                         }
                       >
@@ -739,7 +739,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               <div className="px-4 pb-3 flex gap-3">
                 <button
                   onClick={() => commitContent(contextDiff.suggested)}
-                  className="text-xs text-green-500 hover:text-green-400 transition-colors"
+                  className="text-xs text-green-600 dark:text-green-500 hover:text-green-500 dark:hover:text-green-400 transition-colors"
                 >
                   Yes, commit
                 </button>
@@ -748,13 +748,13 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
                     setEditContent(contextDiff.suggested)
                     setContextState('editing')
                   }}
-                  className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
+                  className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
                 >
                   Edit first
                 </button>
                 <button
                   onClick={dismissContextUpdate}
-                  className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                  className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
                 >
                   Dismiss
                 </button>
@@ -763,26 +763,26 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
           )}
 
           {contextState === 'editing' && (
-            <div className="border-t border-neutral-800 flex flex-col">
+            <div className="border-t border-neutral-200 dark:border-neutral-800 flex flex-col">
               <div className="px-4 py-2">
-                <span className="text-xs text-neutral-400 font-medium">Edit before committing</span>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">Edit before committing</span>
               </div>
               <textarea
                 value={editContent}
                 onChange={e => setEditContent(e.target.value)}
-                className="mx-4 mb-2 bg-neutral-900 text-xs text-neutral-300 leading-5 rounded p-2 resize-none outline-none border border-neutral-700 focus:border-neutral-500 transition-colors"
+                className="mx-4 mb-2 bg-white dark:bg-neutral-900 text-xs text-neutral-700 dark:text-neutral-300 leading-5 rounded p-2 resize-none outline-none border border-neutral-300 dark:border-neutral-700 focus:border-neutral-500 transition-colors"
                 rows={8}
               />
               <div className="px-4 pb-3 flex gap-3">
                 <button
                   onClick={() => commitContent(editContent)}
-                  className="text-xs text-green-500 hover:text-green-400 transition-colors"
+                  className="text-xs text-green-600 dark:text-green-500 hover:text-green-500 dark:hover:text-green-400 transition-colors"
                 >
                   Commit
                 </button>
                 <button
                   onClick={() => setContextState('review')}
-                  className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                  className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
                 >
                   Cancel
                 </button>
@@ -790,7 +790,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             </div>
           )}
 
-          <div className="px-3 pb-3 pt-2 border-t border-neutral-800 flex gap-2 items-end">
+          <div className="px-3 pb-3 pt-2 border-t border-neutral-200 dark:border-neutral-800 flex gap-2 items-end">
             <textarea
               ref={textareaRef}
               value={inputValue}
@@ -801,13 +801,13 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               placeholder="Ask something…"
               disabled={isLoading}
               rows={1}
-              className="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 outline-none focus:border-neutral-600 disabled:opacity-50 resize-none overflow-y-auto leading-relaxed"
+              className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 text-sm text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-neutral-400 dark:focus:border-neutral-600 disabled:opacity-50 resize-none overflow-y-auto leading-relaxed"
               style={{ maxHeight: TEXTAREA_MAX_HEIGHT }}
             />
             {isLoading ? (
               <button
                 onClick={() => abortControllerRef.current?.abort()}
-                className="px-3 py-2 rounded bg-neutral-800 text-neutral-500 hover:text-neutral-300 transition-colors flex-shrink-0"
+                className="px-3 py-2 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors flex-shrink-0"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <rect x="3" y="3" width="8" height="8" rx="1" fill="currentColor"/>
@@ -817,7 +817,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               <button
                 onClick={send}
                 disabled={!inputValue.trim()}
-                className="px-3 py-2 rounded bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-40 flex-shrink-0 text-accent"
+                className="px-3 py-2 rounded bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors disabled:opacity-40 flex-shrink-0 text-accent dark:text-accent-soft"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M7 12V2M3 6l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -826,8 +826,8 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
             )}
           </div>
 
-          <div className="px-3 pb-3 pt-2 border-t border-neutral-800">
-            <p className="text-xs text-neutral-600 px-2 py-1.5">
+          <div className="px-3 pb-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+            <p className="text-xs text-neutral-400 dark:text-neutral-600 px-2 py-1.5">
               <span className="text-neutral-500">Your context</span> — always included
               {activeFile && activeFile !== 'CONTEXT.md' && (
                 <span> · {activeFile.replace(/\.md$/, '')}</span>

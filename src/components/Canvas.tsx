@@ -108,11 +108,11 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
   return (
     <main className="flex-1 flex flex-col overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center justify-end px-4 h-11 flex-shrink-0 border-b border-neutral-800">
+      <div className="flex items-center justify-end px-4 h-11 flex-shrink-0 border-b border-neutral-200 dark:border-neutral-800">
         {!aiPanelOpen && (
           <button
             onClick={onOpenAI}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-neutral-400 dark:text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M10 4L6 8L10 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -134,17 +134,17 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
                 onBlur={handleTitleBlur}
                 onKeyDown={handleTitleKeyDown}
                 placeholder="Untitled"
-                className="w-full bg-transparent text-2xl font-semibold text-neutral-100 placeholder-neutral-700 outline-none mb-8 block"
+                className="w-full bg-transparent text-2xl font-semibold text-neutral-900 dark:text-neutral-100 placeholder-neutral-300 dark:placeholder-neutral-700 outline-none mb-8 block"
                 aria-label="Page title"
               />
             )}
             {filename === 'CONTEXT.md' && (
-              <p className="text-2xl font-semibold text-neutral-100 mb-8">Your context</p>
+              <p className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100 mb-8">Your context</p>
             )}
             {!filename && (
               <>
-                <p className="text-neutral-300 text-sm">This is where your thinking lives.</p>
-                <p className="text-neutral-600 text-sm mt-1">Pick a page or start a new one.</p>
+                <p className="text-neutral-600 dark:text-neutral-300 text-sm">This is where your thinking lives.</p>
+                <p className="text-neutral-400 dark:text-neutral-600 text-sm mt-1">Pick a page or start a new one.</p>
               </>
             )}
           </div>
@@ -160,55 +160,55 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
                 tippyOptions={{ duration: 100 }}
               >
                 {suggestion ? (
-                  <div className="bg-neutral-800 border border-neutral-700 rounded shadow-lg min-w-[280px] max-w-md">
-                    <div className="px-3 py-2 text-sm text-neutral-200 max-h-[200px] overflow-y-auto whitespace-pre-wrap">
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow-lg min-w-[280px] max-w-md">
+                    <div className="px-3 py-2 text-sm text-neutral-800 dark:text-neutral-200 max-h-[200px] overflow-y-auto whitespace-pre-wrap">
                       {suggestion.improved}
                     </div>
-                    <div className="flex border-t border-neutral-700">
-                      <button onClick={acceptSuggestion} className="flex-1 px-3 py-2 text-xs text-accent hover:bg-neutral-700 transition-colors rounded-bl">
+                    <div className="flex border-t border-neutral-200 dark:border-neutral-700">
+                      <button onClick={acceptSuggestion} className="flex-1 px-3 py-2 text-xs text-accent dark:text-accent-soft hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors rounded-bl">
                         Accept
                       </button>
-                      <div className="w-px bg-neutral-700" />
-                      <button onClick={dismissSuggestion} className="flex-1 px-3 py-2 text-xs text-neutral-400 hover:bg-neutral-700 transition-colors rounded-br">
+                      <div className="w-px bg-neutral-200 dark:bg-neutral-700" />
+                      <button onClick={dismissSuggestion} className="flex-1 px-3 py-2 text-xs text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors rounded-br">
                         Dismiss
                       </button>
                     </div>
                   </div>
                 ) : improving ? (
-                  <div className="bg-neutral-800 border border-neutral-700 rounded shadow-lg min-w-[280px] px-3 py-2 text-xs text-neutral-500">
+                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow-lg min-w-[280px] px-3 py-2 text-xs text-neutral-400 dark:text-neutral-500">
                     Improving…
                   </div>
                 ) : (
-                  <div className="flex items-center bg-neutral-800 border border-neutral-700 rounded shadow-lg overflow-hidden">
+                  <div className="flex items-center bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded shadow-lg overflow-hidden">
                     <button
                       onClick={() => editor.chain().focus().toggleBold().run()}
-                      className={`px-2.5 py-1.5 text-xs font-bold transition-colors ${editor.isActive('bold') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                      className={`px-2.5 py-1.5 text-xs font-bold transition-colors ${editor.isActive('bold') ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-700' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                     >B</button>
                     <button
                       onClick={() => editor.chain().focus().toggleItalic().run()}
-                      className={`px-2.5 py-1.5 text-xs italic transition-colors ${editor.isActive('italic') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                      className={`px-2.5 py-1.5 text-xs italic transition-colors ${editor.isActive('italic') ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-700' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                     >I</button>
                     <button
                       onClick={() => editor.chain().focus().toggleCode().run()}
-                      className={`px-2.5 py-1.5 text-xs font-mono transition-colors ${editor.isActive('code') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                      className={`px-2.5 py-1.5 text-xs font-mono transition-colors ${editor.isActive('code') ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-700' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                     >&lt;/&gt;</button>
-                    <div className="w-px h-4 bg-neutral-700 mx-0.5" />
+                    <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-700 mx-0.5" />
                     <button
                       onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                      className={`px-2.5 py-1.5 text-xs transition-colors ${editor.isActive('heading', { level: 2 }) ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                      className={`px-2.5 py-1.5 text-xs transition-colors ${editor.isActive('heading', { level: 2 }) ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-700' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                     >H2</button>
                     <button
                       onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                      className={`px-2.5 py-1.5 text-xs transition-colors ${editor.isActive('heading', { level: 3 }) ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                      className={`px-2.5 py-1.5 text-xs transition-colors ${editor.isActive('heading', { level: 3 }) ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-700' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                     >H3</button>
-                    <div className="w-px h-4 bg-neutral-700 mx-0.5" />
+                    <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-700 mx-0.5" />
                     <button
                       onClick={() => editor.chain().focus().toggleStrike().run()}
-                      className={`px-2.5 py-1.5 text-xs line-through transition-colors ${editor.isActive('strike') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                      className={`px-2.5 py-1.5 text-xs line-through transition-colors ${editor.isActive('strike') ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-700' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                     >S</button>
                     <button
                       onClick={() => editor.chain().focus().toggleBulletList().run()}
-                      className={`px-2.5 py-1.5 transition-colors ${editor.isActive('bulletList') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                      className={`px-2.5 py-1.5 transition-colors ${editor.isActive('bulletList') ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-700' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                     >
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                         <circle cx="2" cy="4" r="1" fill="currentColor"/>
@@ -221,13 +221,13 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
                     </button>
                     <button
                       onClick={() => editor.chain().focus().toggleBlockquote().run()}
-                      className={`px-2.5 py-1.5 text-xs transition-colors ${editor.isActive('blockquote') ? 'text-neutral-100 bg-neutral-700' : 'text-neutral-400 hover:text-neutral-200'}`}
+                      className={`px-2.5 py-1.5 text-xs transition-colors ${editor.isActive('blockquote') ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-700' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                     >"</button>
-                    <div className="w-px h-4 bg-neutral-700 mx-0.5" />
+                    <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-700 mx-0.5" />
                     <button
                       onClick={handleImprove}
                       disabled={improving}
-                      className="px-2.5 py-1.5 text-xs transition-colors text-accent hover:text-accent-hover"
+                      className="px-2.5 py-1.5 text-xs transition-colors text-accent dark:text-accent-soft hover:text-accent-hover dark:hover:text-accent-soft-hover"
                     >Improve</button>
                   </div>
                 )}

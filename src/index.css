@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 html, body, #root {
-  @apply bg-surface;
+  @apply bg-white dark:bg-surface;
 }
 
-.bg-neutral-950 {
+.dark .bg-neutral-950 {
   background-color: theme('colors.surface') !important;
 }
 
@@ -15,39 +15,45 @@ html, body, #root {
   outline: none;
 }
 
-.tiptap p { @apply text-neutral-200 leading-relaxed mb-4; }
-.tiptap h1 { @apply text-2xl font-semibold text-white mb-3 mt-6; }
-.tiptap h2 { @apply text-xl font-semibold text-white mb-3 mt-5; }
-.tiptap h3 { @apply text-lg font-semibold text-white mb-2 mt-4; }
-.tiptap ul { @apply list-disc pl-5 text-neutral-200 mb-4; }
-.tiptap ol { @apply list-decimal pl-5 text-neutral-200 mb-4; }
+.tiptap p { @apply text-neutral-800 dark:text-neutral-200 leading-relaxed mb-4; }
+.tiptap h1 { @apply text-2xl font-semibold text-neutral-900 dark:text-white mb-3 mt-6; }
+.tiptap h2 { @apply text-xl font-semibold text-neutral-900 dark:text-white mb-3 mt-5; }
+.tiptap h3 { @apply text-lg font-semibold text-neutral-900 dark:text-white mb-2 mt-4; }
+.tiptap ul { @apply list-disc pl-5 text-neutral-800 dark:text-neutral-200 mb-4; }
+.tiptap ol { @apply list-decimal pl-5 text-neutral-800 dark:text-neutral-200 mb-4; }
 .tiptap li { @apply mb-1; }
-.tiptap strong { @apply font-semibold text-white; }
+.tiptap strong { @apply font-semibold text-neutral-900 dark:text-white; }
 .tiptap em { @apply italic; }
-.tiptap blockquote { @apply border-l-2 border-neutral-600 pl-4 text-neutral-400 italic mb-4 mt-4; }
-.tiptap code { @apply font-mono text-sm bg-neutral-800 px-1 rounded text-neutral-300; }
+.tiptap blockquote { @apply border-l-2 border-neutral-300 dark:border-neutral-600 pl-4 text-neutral-500 dark:text-neutral-400 italic mb-4 mt-4; }
+.tiptap code { @apply font-mono text-sm bg-neutral-100 dark:bg-neutral-800 px-1 rounded text-neutral-700 dark:text-neutral-300; }
 .tiptap .ProseMirror-focused { caret-color: theme('colors.accent.DEFAULT'); }
+.dark .tiptap .ProseMirror-focused { caret-color: theme('colors.accent.soft'); }
 
 /* AI panel markdown */
-.ai-prose p { @apply text-neutral-300 leading-relaxed mb-2 last:mb-0; }
-.ai-prose h1 { @apply text-lg font-semibold text-neutral-100 mb-2 mt-4 first:mt-0; }
-.ai-prose h2 { @apply text-base font-semibold text-neutral-100 mb-2 mt-4 first:mt-0; }
-.ai-prose h3 { @apply text-sm font-semibold text-neutral-100 mb-1 mt-3 first:mt-0; }
-.ai-prose ul { @apply list-disc pl-5 text-neutral-300 mb-2; }
-.ai-prose ol { @apply list-decimal pl-5 text-neutral-300 mb-2; }
+.ai-prose p { @apply text-neutral-700 dark:text-neutral-300 leading-relaxed mb-2 last:mb-0; }
+.ai-prose h1 { @apply text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2 mt-4 first:mt-0; }
+.ai-prose h2 { @apply text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2 mt-4 first:mt-0; }
+.ai-prose h3 { @apply text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-1 mt-3 first:mt-0; }
+.ai-prose ul { @apply list-disc pl-5 text-neutral-700 dark:text-neutral-300 mb-2; }
+.ai-prose ol { @apply list-decimal pl-5 text-neutral-700 dark:text-neutral-300 mb-2; }
 .ai-prose li { @apply mb-1; }
-.ai-prose strong { @apply font-semibold text-neutral-100; }
+.ai-prose strong { @apply font-semibold text-neutral-900 dark:text-neutral-100; }
 .ai-prose em { @apply italic; }
-.ai-prose blockquote { @apply border-l-2 border-neutral-700 pl-3 text-neutral-400 italic mb-2; }
-.ai-prose code { @apply font-mono text-xs bg-neutral-800 px-1 py-0.5 rounded text-neutral-300; }
-.ai-prose pre { @apply bg-neutral-800 rounded p-3 mb-2 overflow-x-auto; }
+.ai-prose blockquote { @apply border-l-2 border-neutral-300 dark:border-neutral-700 pl-3 text-neutral-500 dark:text-neutral-400 italic mb-2; }
+.ai-prose code { @apply font-mono text-xs bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-neutral-700 dark:text-neutral-300; }
+.ai-prose pre { @apply bg-neutral-100 dark:bg-neutral-800 rounded p-3 mb-2 overflow-x-auto; }
 .ai-prose pre code { @apply bg-transparent p-0; }
 .ai-prose a { @apply text-accent hover:underline; }
-.ai-prose hr { @apply border-neutral-700 my-3; }
+.dark .ai-prose a { color: theme('colors.accent.soft'); }
+.ai-prose hr { @apply border-neutral-300 dark:border-neutral-700 my-3; }
 
 /* Scrollbars */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
-*:hover::-webkit-scrollbar-thumb { background: #2a2a2a; }
-::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+*:hover::-webkit-scrollbar-thumb { background: #d4d4d4; }
+::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+
+.dark ::-webkit-scrollbar-thumb { background: transparent; }
+.dark *:hover::-webkit-scrollbar-thumb { background: #2a2a2a; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }

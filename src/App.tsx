@@ -12,6 +12,29 @@ export default function App() {
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [activeContent, setActiveContent] = useState<string>('')
 
+  // Theme: system default, manual override via localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('february-theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isDark = saved ? saved === 'dark' : prefersDark
+    document.documentElement.classList.toggle('dark', isDark)
+
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem('february-theme')) {
+        document.documentElement.classList.toggle('dark', e.matches)
+      }
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  function toggleTheme() {
+    const isDark = document.documentElement.classList.contains('dark')
+    document.documentElement.classList.toggle('dark', !isDark)
+    localStorage.setItem('february-theme', isDark ? 'light' : 'dark')
+  }
+
   const loadFiles = useCallback(async () => {
     const res = await fetch('/api/files')
     const data = await res.json()
@@ -91,7 +114,7 @@ export default function App() {
   }, [activeFile, loadFiles])
 
   return (
-    <div className="flex h-screen bg-neutral-900 text-neutral-200 overflow-hidden">
+    <div className="flex h-screen bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 overflow-hidden">
       <Sidebar
         open={sidebarOpen}
         onToggle={() => setSidebarOpen(o => !o)}
@@ -100,6 +123,7 @@ export default function App() {
         onOpenFile={openFile}
         onCreateFile={createFile}
         onDeleteFile={deleteFile}
+        onToggleTheme={toggleTheme}
       />
       <Canvas
         onOpenAI={() => setAiPanelOpen(o => !o)}
