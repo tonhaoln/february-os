@@ -11,6 +11,7 @@ export default function App() {
   const [files, setFiles] = useState<string[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [activeContent, setActiveContent] = useState<string>('')
+  const [mode, setMode] = useState<'editor' | 'canvas'>('editor')
 
   // Theme: system default, manual override via localStorage
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function App() {
   }, [loadFiles])
 
   const openFile = useCallback(async (filename: string) => {
+    setMode('editor')
     const res = await fetch(`/api/files/${encodeURIComponent(filename)}`)
     const data = await res.json()
     setActiveFile(filename)
@@ -132,6 +134,8 @@ export default function App() {
         content={activeContent}
         onSave={saveFile}
         onRename={renameFile}
+        mode={mode}
+        onModeChange={setMode}
       />
       <AIPanel
         open={aiPanelOpen}

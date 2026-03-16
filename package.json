@@ -22,7 +22,8 @@
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
     "simple-git": "^3.32.3",
-    "tiptap-markdown": "^0.8.10"
+    "tiptap-markdown": "^0.8.10",
+    "tldraw": "^4.4.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

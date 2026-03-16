@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
+import Whiteboard from './Whiteboard'
 
 interface CanvasProps {
   onOpenAI: () => void
@@ -10,13 +11,15 @@ interface CanvasProps {
   content: string
   onSave: (content: string) => void
   onRename: (newName: string) => void
+  mode: 'editor' | 'canvas'
+  onModeChange: (mode: 'editor' | 'canvas') => void
 }
 
 function stripMd(filename: string) {
   return filename.replace(/\.md$/, '')
 }
 
-export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSave, onRename }: CanvasProps) {
+export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSave, onRename, mode, onModeChange }: CanvasProps) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [title, setTitle] = useState('')
   const [improving, setImproving] = useState(false)
@@ -142,22 +145,48 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
   return (
     <main className="flex-1 flex flex-col overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center justify-end px-4 h-11 flex-shrink-0 border-b border-neutral-200 dark:border-neutral-800">
-        {!aiPanelOpen && (
+      <div className="flex items-center justify-between px-4 h-11 flex-shrink-0 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center gap-0.5">
           <button
-            onClick={onOpenAI}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-neutral-400 dark:text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+            onClick={() => onModeChange('editor')}
+            className={`px-2.5 py-1.5 rounded text-xs transition-colors ${mode === 'editor' ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-800' : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300'}`}
+            title="Editor"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M10 4L6 8L10 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 2h8a1 1 0 011 1v8a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M4 5h6M4 7h6M4 9h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
             </svg>
-            Ask AI
           </button>
-        )}
+          <button
+            onClick={() => onModeChange('canvas')}
+            className={`px-2.5 py-1.5 rounded text-xs transition-colors ${mode === 'canvas' ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-800' : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300'}`}
+            title="Canvas"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="2" y="2" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.2"/>
+              <rect x="8" y="2" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.2"/>
+              <rect x="2" y="8" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.2"/>
+              <rect x="8" y="8" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.2"/>
+            </svg>
+          </button>
+        </div>
+        <div>
+          {!aiPanelOpen && (
+            <button
+              onClick={onOpenAI}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-neutral-400 dark:text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M10 4L6 8L10 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Ask AI
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Writing area — full area is click target */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ display: mode === 'editor' ? undefined : 'none' }}>
         <div className="max-w-[700px] mx-auto px-8 py-12 min-h-full">
           {/* Non-Tiptap content — React freely inserts/removes here */}
           <div>
@@ -290,6 +319,11 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
             <EditorContent editor={editor} className="tiptap" />
           </div>
         </div>
+      </div>
+
+      {/* Canvas mode — tldraw */}
+      <div style={{ display: mode === 'canvas' ? undefined : 'none' }} className="flex-1">
+        <Whiteboard />
       </div>
     </main>
   )
