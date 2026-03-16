@@ -292,6 +292,82 @@ app.post('/api/context-suggest', async (req, res) => {
   }
 })
 
+// --- Brainstorm route ---
+
+app.post('/api/brainstorm', async (req, res) => {
+  const { mode, shapes, focus, context: nearbyContext, provider: requestedProvider, ollamaModel } = req.body
+
+  const detected = await detectProvider()
+  const provider = requestedProvider || detected.provider
+  const model = selectModel(provider, ollamaModel || detected.ollamaModel)
+
+  const contextFile = fs.existsSync(CONTEXT_FILE) ? fs.readFileSync(CONTEXT_FILE, 'utf-8').trim() : ''
+  const contextSection = contextFile ? `\nThe author's context:\n${contextFile}\n` : ''
+
+  const formatShape = (s: { id: string; text: string; x: number; y: number }) =>
+    `- id="${s.id}" text="${s.text}" position=(${s.x}, ${s.y})`
+
+  let prompt: string
+
+  if (mode === 'reactive') {
+    // Reactive: respond to a specific new note
+    if (!focus || !Array.isArray(focus) || focus.length === 0) {
+      return res.json({ actions: [] })
+    }
+    const focusText = focus.map(formatShape).join('\n')
+    const nearbyText = nearbyContext?.length ? `\nNearby notes for context:\n${nearbyContext.map(formatShape).join('\n')}` : ''
+
+    prompt = `The user just added a note to their brainstorming canvas.
+
+New note:
+${focusText}
+${nearbyText}
+${contextSection}
+If this note connects to something nearby, or raises a question worth asking, respond with one short action (one sentence max). If it's too early or self-explanatory, return an empty array.
+
+Return ONLY a JSON array. No explanation, no markdown fences.
+[{"type":"note","near":"shape-id","text":"..."}]
+[{"type":"question","near":"shape-id","text":"..."}]
+[]`
+  } else {
+    // Reflective: observe the whole board
+    if (!shapes || !Array.isArray(shapes) || shapes.length === 0) {
+      return res.json({ actions: [] })
+    }
+    const shapesText = shapes.map(formatShape).join('\n')
+
+    prompt = `You are a facilitator on a brainstorming canvas. You observe the user's thinking spatially. You do NOT add ideas — you organise, illuminate, and ask.
+
+Below are the user's notes with their positions (x, y). Notes near each other (within ~300px) are likely related.
+${contextSection}
+Canvas state:
+${shapesText}
+
+Your job:
+- If notes are clustered nearby, name the theme that connects them
+- If a note raises a question or has a gap, ask about it
+- If two distant notes relate, suggest the connection
+- If the board is too early or doesn't need intervention, return an empty array
+
+Respond with 0-1 actions. Silence is preferred over noise.
+
+Return ONLY a JSON array. No explanation, no markdown fences.
+[{"type":"note","near":"shape-id","text":"..."}]
+[{"type":"cluster-name","near":["id1","id2"],"text":"Theme: ..."}]
+[{"type":"question","near":"shape-id","text":"..."}]
+[]`
+  }
+
+  try {
+    const result = await generateText({ model, prompt })
+    const cleaned = result.text.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim()
+    const actions = JSON.parse(cleaned)
+    res.json({ actions: Array.isArray(actions) ? actions : [] })
+  } catch {
+    res.json({ actions: [] })
+  }
+})
+
 // --- Improve route ---
 
 app.post('/api/improve', async (req, res) => {
