@@ -136,8 +136,19 @@ export default function Whiteboard() {
     } else {
       const nearId = typeof action.near === 'string' ? action.near : action.near?.[0]
       const refShape = nearId ? allShapes.find(s => s.id === nearId) : null
-      const targetX = refShape ? refShape.x + 300 : 400
-      const targetY = refShape ? refShape.y : 200
+      let targetX = refShape ? refShape.x + 300 : 400
+      let targetY = refShape ? refShape.y : 200
+
+      // Offset if another shape is already near this position
+      const OVERLAP_THRESHOLD = 50
+      let attempts = 0
+      while (attempts < 5 && allShapes.some(s =>
+        Math.abs(s.x - targetX) < OVERLAP_THRESHOLD && Math.abs(s.y - targetY) < OVERLAP_THRESHOLD
+      )) {
+        targetX += 150
+        targetY += 100
+        attempts++
+      }
 
       await animateCursor(targetX, targetY)
 
