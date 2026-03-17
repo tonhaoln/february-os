@@ -25,7 +25,11 @@ interface ShapeData {
   y: number
 }
 
-export default function Whiteboard() {
+interface WhiteboardProps {
+  onEndSession: (filename: string) => void
+}
+
+export default function Whiteboard({ onEndSession }: WhiteboardProps) {
   const editorRef = useRef<Editor | null>(null)
   const reactiveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reflectiveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -42,6 +46,8 @@ export default function Whiteboard() {
   const [cursorPos, setCursorPos] = useState({ x: 80, y: 80 })
   const [cursorVisible, setCursorVisible] = useState(true)
   const [isSleeping, setIsSleeping] = useState(false)
+  const [hasShapes, setHasShapes] = useState(false)
+  const [isEnding, setIsEnding] = useState(false)
 
   // Sync dark mode
   useEffect(() => {
@@ -264,6 +270,97 @@ export default function Whiteboard() {
     scheduleIdleDrift()
   }
 
+  async function endSession() {
+    if (isEnding) return
+    setIsEnding(true)
+    const editor = editorRef.current
+    if (!editor) { setIsEnding(false); return }
+
+    const allShapes = editor.getCurrentPageShapes()
+      .filter(s => s.type === 'note' || s.type === 'text')
+    if (allShapes.length === 0) return
+
+    const userNotes: string[] = []
+    const aiNotes: string[] = []
+
+    for (const s of allShapes) {
+      const text = renderPlaintextFromRichText(editor, (s.props as { richText: Parameters<typeof renderPlaintextFromRichText>[1] }).richText).trim()
+      if (!text) continue
+      if (aiShapeIds.current.has(s.id)) {
+        aiNotes.push(text)
+      } else {
+        userNotes.push(text)
+      }
+    }
+
+    const now = new Date()
+    const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    const heading = `# Canvas Session — ${dateStr}, ${timeStr}\n\n`
+
+    // Try AI synthesis first, fall back to raw dump
+    let markdown = ''
+    try {
+      const synthRes = await fetch('/api/brainstorm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'synthesis',
+          userNotes,
+          aiNotes,
+          provider: providerRef.current,
+          ollamaModel: ollamaModelRef.current || undefined,
+        }),
+      })
+      const synthData = await synthRes.json()
+      if (synthData.markdown) {
+        markdown = heading + synthData.markdown
+      }
+    } catch {
+      // Synthesis failed — fall through to raw dump
+    }
+
+    // Fallback: raw dump if synthesis didn't produce anything
+    if (!markdown) {
+      markdown = heading
+      if (userNotes.length > 0) {
+        markdown += `## Your notes\n${userNotes.map(n => `- ${n}`).join('\n')}\n\n`
+      }
+      if (aiNotes.length > 0) {
+        markdown += `## AI observations\n${aiNotes.map(n => `- ${n}`).join('\n')}\n`
+      }
+    }
+
+    const filename = `Canvas Session ${dateStr} ${timeStr.replace(':', '')}.md`
+
+    try {
+      await fetch('/api/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: `Canvas Session ${dateStr} ${timeStr.replace(':', '')}` }),
+      })
+      await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: markdown }),
+      })
+
+      // Clear canvas
+      editor.selectAll()
+      editor.deleteShapes(editor.getSelectedShapeIds())
+
+      // Reset state
+      aiShapeIds.current.clear()
+      processedShapeIds.current.clear()
+      processedTexts.current.clear()
+      setHasShapes(false)
+
+      onEndSession(filename)
+    } catch {
+      // Silent
+    }
+  }
+
   function handleMount(editor: Editor) {
     editorRef.current = editor
     editor.user.updateUserPreferences({ colorScheme: isDark ? 'dark' : 'light' })
@@ -281,6 +378,9 @@ export default function Whiteboard() {
 
       if (!hasShapeChange) return
 
+      // Track if canvas has shapes (for End Session button visibility)
+      setHasShapes(editor.getCurrentPageShapes().filter(s => s.type === 'note' || s.type === 'text').length > 0)
+
       // Wake up on user activity
       wakeUp()
 
@@ -295,6 +395,34 @@ export default function Whiteboard() {
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <Tldraw onMount={handleMount} />
+
+      {/* End session button */}
+      {hasShapes && (
+        <button
+          onClick={endSession}
+          disabled={isEnding}
+          style={{
+            position: 'absolute',
+            bottom: 24,
+            right: 24,
+            zIndex: 999,
+            padding: '8px 16px',
+            borderRadius: 6,
+            fontSize: 13,
+            cursor: isEnding ? 'default' : 'pointer',
+            transition: 'background 0.2s, color 0.2s, opacity 0.2s',
+            background: isDark ? 'rgba(38, 38, 38, 0.9)' : 'rgba(245, 245, 245, 0.9)',
+            color: isDark ? '#a3a3a3' : '#525252',
+            border: `1px solid ${isDark ? '#404040' : '#d4d4d4'}`,
+            backdropFilter: 'blur(8px)',
+            opacity: isEnding ? 0.6 : 1,
+          }}
+        >
+          <span className={isEnding ? 'animate-pulse-subtle' : ''}>
+            {isEnding ? 'Synthesising…' : 'End session'}
+          </span>
+        </button>
+      )}
 
       {/* AI cursor overlay */}
       {cursorVisible && (

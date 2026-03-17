@@ -13,13 +13,14 @@ interface CanvasProps {
   onRename: (newName: string) => void
   mode: 'editor' | 'canvas'
   onModeChange: (mode: 'editor' | 'canvas') => void
+  onEndSession: (filename: string) => void
 }
 
 function stripMd(filename: string) {
   return filename.replace(/\.md$/, '')
 }
 
-export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSave, onRename, mode, onModeChange }: CanvasProps) {
+export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSave, onRename, mode, onModeChange, onEndSession }: CanvasProps) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [title, setTitle] = useState('')
   const [improving, setImproving] = useState(false)
@@ -323,7 +324,7 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
 
       {/* Canvas mode — tldraw */}
       <div style={{ display: mode === 'canvas' ? undefined : 'none' }} className="flex-1">
-        <Whiteboard />
+        <Whiteboard onEndSession={onEndSession} />
       </div>
     </main>
   )

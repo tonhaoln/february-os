@@ -338,6 +338,59 @@ Identity:
 - One sentence max when you speak. Sharp, specific, referencing concrete notes.
 ${contextFile ? `\nThe user's context:\n${contextFile}\n` : ''}`
 
+  // Synthesis mode — handle separately, different output format
+  if (mode === 'synthesis') {
+    const { userNotes, aiNotes } = req.body
+    if (!userNotes || !Array.isArray(userNotes) || userNotes.length === 0) {
+      return res.json({ markdown: '' })
+    }
+
+    const userList = userNotes.map((n: string, i: number) => `${i + 1}. ${n}`).join('\n')
+    const aiList = aiNotes?.length ? aiNotes.map((n: string, i: number) => `${i + 1}. ${n}`).join('\n') : 'None'
+
+    const synthesisPrompt = `You are producing a session synthesis for a brainstorming canvas. The user's notes are the authority — preserve them exactly. Your job is to add structure around them.
+${contextFile ? `\nThe user's context:\n${contextFile}\n` : ''}
+User's notes (in order they were created):
+${userList}
+
+AI observations made during the session:
+${aiList}
+
+Produce a markdown document with these exact sections:
+
+## What you were thinking about
+[One sentence distilling the core topic from the user's notes]
+
+## Your notes
+[List the user's notes exactly as written, as bullet points]
+
+## Themes
+[Name 2-4 clusters you see in the notes. For each: a 2-4 word theme label, then the notes that belong to it]
+
+## Connections
+[1-3 non-obvious relationships between notes. Be specific — reference actual notes.]
+
+## Open questions
+[1-3 things left unresolved or unexplored]
+
+## What the AI observed
+[Summarise the AI's contributions during the session in 2-3 sentences — contextualised, not a raw list]
+
+Rules:
+- Never modify the user's notes. Quote them exactly.
+- Themes should be 2-4 words, not sentences.
+- If there aren't enough notes for meaningful themes, skip that section.
+
+Return ONLY the markdown. No explanation, no code fences.`
+
+    try {
+      const result = await generateText({ model, prompt: synthesisPrompt, temperature: 0.5 })
+      return res.json({ markdown: result.text })
+    } catch {
+      return res.json({ markdown: '' })
+    }
+  }
+
   let prompt: string
 
   if (mode === 'reactive') {

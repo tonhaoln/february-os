@@ -47,6 +47,15 @@ html, body, #root {
 .dark .ai-prose a { color: theme('colors.accent.soft'); }
 .ai-prose hr { @apply border-neutral-300 dark:border-neutral-700 my-3; }
 
+/* Pulse animation for loading states */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+.animate-pulse-subtle {
+  animation: pulse-subtle 1.8s ease-in-out infinite;
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

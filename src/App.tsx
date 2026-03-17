@@ -136,6 +136,7 @@ export default function App() {
         onRename={renameFile}
         mode={mode}
         onModeChange={setMode}
+        onEndSession={async (filename: string) => { await loadFiles(); await openFile(filename) }}
       />
       <AIPanel
         open={aiPanelOpen}
