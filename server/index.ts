@@ -321,10 +321,22 @@ app.post('/api/brainstorm', async (req, res) => {
   const model = selectModel(provider, ollamaModel || detected.ollamaModel)
 
   const contextFile = fs.existsSync(CONTEXT_FILE) ? fs.readFileSync(CONTEXT_FILE, 'utf-8').trim() : ''
-  const contextSection = contextFile ? `\nThe author's context:\n${contextFile}\n` : ''
 
   const formatShape = (s: { id: string; text: string; x: number; y: number }) =>
     `- id="${s.id}" text="${s.text}" xy=(${s.x},${s.y})`
+
+  // Shared identity — consistent across all modes
+  const preamble = `You are February's canvas agent. You observe a user's brainstorming canvas and illuminate what's already there but unseen.
+
+Your role: facilitator, not participant. You don't add ideas. You name patterns, surface connections, and point out gaps.
+
+Identity:
+- You are a spatial reasoning partner. Position on the canvas is meaning.
+- You are opinionated. Commit to a perspective. No hedging: no "might," "could," "perhaps."
+- You are quiet by default. Silence is your most common response.
+- You reason about ideas, never about the board itself (duplicates, formatting, layout).
+- One sentence max when you speak. Sharp, specific, referencing concrete notes.
+${contextFile ? `\nThe user's context:\n${contextFile}\n` : ''}`
 
   let prompt: string
 
@@ -335,18 +347,14 @@ app.post('/api/brainstorm', async (req, res) => {
     const focusText = focus.map(formatShape).join('\n')
     const nearbyText = nearbyContext?.length ? `\nNearby notes:\n${nearbyContext.map(formatShape).join('\n')}` : '\nNearby notes: None'
 
-    prompt = `You are a spatial reasoning partner on a brainstorming canvas. You notice what the user hasn't named yet. You don't help — you illuminate.
+    prompt = `${preamble}
+Mode: A new note was just added.
 
-The user just added this note:
+New note:
 ${focusText}
 ${nearbyText}
-${contextSection}
-Rules:
-- One sentence max. No hedging: no "might," "could," "perhaps," "you might want to."
-- Commit to a perspective. Be specific. Reference concrete notes.
-- If this note is self-explanatory or too early to reason about, return [].
-- Silence is your default. Only speak if you see something non-obvious.
-- Never comment on the board itself (duplicates, formatting, layout). Only reason about ideas.
+
+If this note is self-explanatory or too early to reason about, return [].
 
 Examples:
 
@@ -389,23 +397,17 @@ Return ONLY a JSON array. No explanation.`
       }
     }
 
-    prompt = `You are observing a brainstorming canvas. Your job: find one thing worth illuminating that the user hasn't seen yet. Default to silence.
-${contextSection}
+    prompt = `${preamble}
+Mode: The user has paused. Observe the full board.
+
 Canvas state (grouped by spatial proximity):
 ${canvasState}
 
 Response priority (pick the FIRST that applies):
-1. An unnamed cluster exists (3+ related notes grouped together) → Name the theme
+1. An unnamed cluster exists (3+ related notes grouped together) → Name the theme (2-4 words, the essence)
 2. Two distant notes are connected but the user hasn't linked them → Surface the connection
 3. A clear gap exists in an otherwise complete cluster → Point it out
 4. Nothing non-obvious → Return []
-
-Rules:
-- One action maximum. Silence is the most common response.
-- No hedging: no "might," "could," "perhaps."
-- Be specific. Reference shape IDs.
-- Cluster names should be 2-4 words that capture the essence, not a description.
-- Never comment on the board itself (duplicates, formatting, layout). Only reason about ideas.
 
 Examples:
 
