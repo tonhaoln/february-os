@@ -135,7 +135,7 @@ export default function App() {
         onSave={saveFile}
         onRename={renameFile}
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={(m: 'editor' | 'canvas') => { setMode(m); if (m === 'canvas') setAiPanelOpen(false) }}
         onEndSession={async (filename: string) => { await loadFiles(); await openFile(filename) }}
       />
       <AIPanel

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
-import Whiteboard from './Whiteboard'
+import Whiteboard, { WhiteboardHandle } from './Whiteboard'
 
 interface CanvasProps {
   onOpenAI: () => void
@@ -22,6 +22,9 @@ function stripMd(filename: string) {
 
 export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSave, onRename, mode, onModeChange, onEndSession }: CanvasProps) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const whiteboardRef = useRef<WhiteboardHandle>(null)
+  const [canvasHasShapes, setCanvasHasShapes] = useState(false)
+  const [canvasIsEnding, setCanvasIsEnding] = useState(false)
   const [title, setTitle] = useState('')
   const [improving, setImproving] = useState(false)
   const [suggestion, setSuggestion] = useState<{ from: number; to: number; improved: string } | null>(null)
@@ -171,7 +174,18 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
             </svg>
           </button>
         </div>
-        <div>
+        <div className="flex items-center gap-1">
+          {mode === 'canvas' && canvasHasShapes && (
+            <button
+              onClick={() => whiteboardRef.current?.endSession()}
+              disabled={canvasIsEnding}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm border transition-colors ${canvasIsEnding ? 'opacity-60' : ''} text-accent dark:text-accent-soft border-accent/25 dark:border-accent-soft/25`}
+            >
+              <span className={canvasIsEnding ? 'animate-pulse-subtle' : ''}>
+                {canvasIsEnding ? 'Synthesising…' : 'End session'}
+              </span>
+            </button>
+          )}
           {!aiPanelOpen && (
             <button
               onClick={onOpenAI}
@@ -324,7 +338,11 @@ export default function Canvas({ onOpenAI, aiPanelOpen, filename, content, onSav
 
       {/* Canvas mode — tldraw */}
       <div style={{ display: mode === 'canvas' ? undefined : 'none' }} className="flex-1">
-        <Whiteboard onEndSession={onEndSession} />
+        <Whiteboard
+          onEndSession={onEndSession}
+          whiteboardRef={whiteboardRef}
+          onStateChange={(shapes, ending) => { setCanvasHasShapes(shapes); setCanvasIsEnding(ending) }}
+        />
       </div>
     </main>
   )

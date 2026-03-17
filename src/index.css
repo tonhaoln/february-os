@@ -47,6 +47,11 @@ html, body, #root {
 .dark .ai-prose a { color: theme('colors.accent.soft'); }
 .ai-prose hr { @apply border-neutral-300 dark:border-neutral-700 my-3; }
 
+/* tldraw note text fix — ensure dark text when editing in light mode */
+.tl-note__container .tl-text-input {
+  color: inherit;
+}
+
 /* Pulse animation for loading states */
 @keyframes pulse-subtle {
   0%, 100% { opacity: 0.5; }

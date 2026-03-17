@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useState, useCallback, useImperativeHandle } from 'react'
 import { Tldraw, Editor, TLRecord, createShapeId, renderPlaintextFromRichText } from 'tldraw'
 import { toRichText } from '@tldraw/tlschema'
 import 'tldraw/tldraw.css'
@@ -25,11 +25,17 @@ interface ShapeData {
   y: number
 }
 
-interface WhiteboardProps {
-  onEndSession: (filename: string) => void
+export interface WhiteboardHandle {
+  endSession: () => void
 }
 
-export default function Whiteboard({ onEndSession }: WhiteboardProps) {
+interface WhiteboardProps {
+  onEndSession: (filename: string) => void
+  onStateChange?: (hasShapes: boolean, isEnding: boolean) => void
+  whiteboardRef?: React.Ref<WhiteboardHandle>
+}
+
+export default function Whiteboard({ onEndSession, onStateChange, whiteboardRef }: WhiteboardProps) {
   const editorRef = useRef<Editor | null>(null)
   const reactiveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reflectiveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -49,8 +55,15 @@ export default function Whiteboard({ onEndSession }: WhiteboardProps) {
   const [hasShapes, setHasShapes] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
 
-  // Sync dark mode
+  useImperativeHandle(whiteboardRef, () => ({ endSession }))
+
   useEffect(() => {
+    onStateChange?.(hasShapes, isEnding)
+  }, [hasShapes, isEnding])
+
+  // Sync dark mode — check initial state + watch for changes
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains('dark'))
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.classList.contains('dark'))
     })
@@ -395,34 +408,6 @@ export default function Whiteboard({ onEndSession }: WhiteboardProps) {
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <Tldraw onMount={handleMount} />
-
-      {/* End session button */}
-      {hasShapes && (
-        <button
-          onClick={endSession}
-          disabled={isEnding}
-          style={{
-            position: 'absolute',
-            bottom: 24,
-            right: 24,
-            zIndex: 999,
-            padding: '8px 16px',
-            borderRadius: 6,
-            fontSize: 13,
-            cursor: isEnding ? 'default' : 'pointer',
-            transition: 'background 0.2s, color 0.2s, opacity 0.2s',
-            background: isDark ? 'rgba(38, 38, 38, 0.9)' : 'rgba(245, 245, 245, 0.9)',
-            color: isDark ? '#a3a3a3' : '#525252',
-            border: `1px solid ${isDark ? '#404040' : '#d4d4d4'}`,
-            backdropFilter: 'blur(8px)',
-            opacity: isEnding ? 0.6 : 1,
-          }}
-        >
-          <span className={isEnding ? 'animate-pulse-subtle' : ''}>
-            {isEnding ? 'Synthesising…' : 'End session'}
-          </span>
-        </button>
-      )}
 
       {/* AI cursor overlay */}
       {cursorVisible && (
