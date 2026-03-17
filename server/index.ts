@@ -294,6 +294,25 @@ app.post('/api/context-suggest', async (req, res) => {
 
 // --- Brainstorm route ---
 
+function groupByProximity(shapes: { id: string; text: string; x: number; y: number }[], threshold = 300) {
+  const groups: typeof shapes[] = []
+  const visited = new Set<string>()
+  for (const shape of shapes) {
+    if (visited.has(shape.id)) continue
+    const cluster = [shape]
+    visited.add(shape.id)
+    for (const other of shapes) {
+      if (visited.has(other.id)) continue
+      if (Math.abs(other.x - shape.x) < threshold && Math.abs(other.y - shape.y) < threshold) {
+        cluster.push(other)
+        visited.add(other.id)
+      }
+    }
+    groups.push(cluster)
+  }
+  return groups
+}
+
 app.post('/api/brainstorm', async (req, res) => {
   const { mode, shapes, focus, context: nearbyContext, provider: requestedProvider, ollamaModel } = req.body
 
@@ -305,64 +324,114 @@ app.post('/api/brainstorm', async (req, res) => {
   const contextSection = contextFile ? `\nThe author's context:\n${contextFile}\n` : ''
 
   const formatShape = (s: { id: string; text: string; x: number; y: number }) =>
-    `- id="${s.id}" text="${s.text}" position=(${s.x}, ${s.y})`
+    `- id="${s.id}" text="${s.text}" xy=(${s.x},${s.y})`
 
   let prompt: string
 
   if (mode === 'reactive') {
-    // Reactive: respond to a specific new note
     if (!focus || !Array.isArray(focus) || focus.length === 0) {
       return res.json({ actions: [] })
     }
     const focusText = focus.map(formatShape).join('\n')
-    const nearbyText = nearbyContext?.length ? `\nNearby notes for context:\n${nearbyContext.map(formatShape).join('\n')}` : ''
+    const nearbyText = nearbyContext?.length ? `\nNearby notes:\n${nearbyContext.map(formatShape).join('\n')}` : '\nNearby notes: None'
 
-    prompt = `The user just added a note to their brainstorming canvas.
+    prompt = `You are a spatial reasoning partner on a brainstorming canvas. You notice what the user hasn't named yet. You don't help — you illuminate.
 
-New note:
+The user just added this note:
 ${focusText}
 ${nearbyText}
 ${contextSection}
-If this note connects to something nearby, or raises a question worth asking, respond with one short action (one sentence max). If it's too early or self-explanatory, return an empty array.
+Rules:
+- One sentence max. No hedging: no "might," "could," "perhaps," "you might want to."
+- Commit to a perspective. Be specific. Reference concrete notes.
+- If this note is self-explanatory or too early to reason about, return [].
+- Silence is your default. Only speak if you see something non-obvious.
+- Never comment on the board itself (duplicates, formatting, layout). Only reason about ideas.
 
-Return ONLY a JSON array. No explanation, no markdown fences.
-[{"type":"note","near":"shape-id","text":"..."}]
-[{"type":"question","near":"shape-id","text":"..."}]
-[]`
+Examples:
+
+User added: "Need offline mode" near "PWA support", "Local storage"
+[{"type":"note","near":"shape:abc","text":"These three define the offline architecture — that's a buildable scope."}]
+
+User added: "Budget: $40k" with no nearby notes
+[{"type":"note","near":"shape:def","text":"First constraint on the board. Everything above changes shape now."}]
+
+User added: "Use React" near "Vue considered", "Angular tried"
+[{"type":"question","near":"shape:xyz","text":"Three frameworks explored — what made you keep coming back to React?"}]
+
+User added: "Dark mode" with no nearby notes
+[]
+
+User added: "Users drop off at checkout" near "3-step form", "No guest checkout"
+[{"type":"question","near":"shape:ghi","text":"Is the 3-step form the bottleneck, or is it the missing guest option?"}]
+
+Return ONLY a JSON array. No explanation.`
   } else {
-    // Reflective: observe the whole board
     if (!shapes || !Array.isArray(shapes) || shapes.length === 0) {
       return res.json({ actions: [] })
     }
-    const shapesText = shapes.map(formatShape).join('\n')
 
-    prompt = `You are a facilitator on a brainstorming canvas. You observe the user's thinking spatially. You do NOT add ideas — you organise, illuminate, and ask.
+    const clusters = groupByProximity(shapes)
+    let canvasState = ''
+    let clusterIndex = 0
+    for (const cluster of clusters) {
+      if (cluster.length >= 3) {
+        const avgX = Math.round(cluster.reduce((s, c) => s + c.x, 0) / cluster.length)
+        const avgY = Math.round(cluster.reduce((s, c) => s + c.y, 0) / cluster.length)
+        canvasState += `\nCluster ${String.fromCharCode(65 + clusterIndex)} (${cluster.length} notes, near ${avgX},${avgY}):\n`
+        canvasState += cluster.map(formatShape).join('\n')
+        clusterIndex++
+      } else if (cluster.length === 2) {
+        canvasState += `\nPair (near ${cluster[0].x},${cluster[0].y}):\n`
+        canvasState += cluster.map(formatShape).join('\n')
+      } else {
+        canvasState += `\nIsolated:\n${formatShape(cluster[0])}`
+      }
+    }
 
-Below are the user's notes with their positions (x, y). Notes near each other (within ~300px) are likely related.
+    prompt = `You are observing a brainstorming canvas. Your job: find one thing worth illuminating that the user hasn't seen yet. Default to silence.
 ${contextSection}
-Canvas state:
-${shapesText}
+Canvas state (grouped by spatial proximity):
+${canvasState}
 
-Your job:
-- If notes are clustered nearby, name the theme that connects them
-- If a note raises a question or has a gap, ask about it
-- If two distant notes relate, suggest the connection
-- If the board is too early or doesn't need intervention, return an empty array
+Response priority (pick the FIRST that applies):
+1. An unnamed cluster exists (3+ related notes grouped together) → Name the theme
+2. Two distant notes are connected but the user hasn't linked them → Surface the connection
+3. A clear gap exists in an otherwise complete cluster → Point it out
+4. Nothing non-obvious → Return []
 
-Respond with 0-1 actions. Silence is preferred over noise.
+Rules:
+- One action maximum. Silence is the most common response.
+- No hedging: no "might," "could," "perhaps."
+- Be specific. Reference shape IDs.
+- Cluster names should be 2-4 words that capture the essence, not a description.
+- Never comment on the board itself (duplicates, formatting, layout). Only reason about ideas.
 
-Return ONLY a JSON array. No explanation, no markdown fences.
-[{"type":"note","near":"shape-id","text":"..."}]
-[{"type":"cluster-name","near":["id1","id2"],"text":"Theme: ..."}]
-[{"type":"question","near":"shape-id","text":"..."}]
-[]`
+Examples:
+
+Canvas has 3 notes clustered: "Silent Git commits", "Auto-save", "Version history"
+[{"type":"cluster-name","near":["shape:a","shape:b","shape:c"],"text":"Invisible versioning"}]
+
+Canvas has "User onboarding" far from "Churn analysis" — both about retention
+[{"type":"note","near":"shape:d","text":"Onboarding and churn are the same problem from opposite ends."}]
+
+Canvas has 2 notes: "Use TypeScript", "Add linting"
+[]
+
+Canvas has 5 scattered unrelated notes, no clusters
+[]
+
+Canvas has cluster "Auth flow" (login, signup, reset) but no mention of sessions
+[{"type":"question","near":"shape:e","text":"Auth flow is complete except session management — intentional?"}]
+
+Return ONLY a JSON array. No explanation.`
   }
 
   try {
-    const result = await generateText({ model, prompt })
+    const result = await generateText({ model, prompt, temperature: 0.7, topP: 0.9 })
     const cleaned = result.text.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim()
-    const actions = JSON.parse(cleaned)
-    res.json({ actions: Array.isArray(actions) ? actions : [] })
+    const actions = cleaned === '[]' ? [] : JSON.parse(cleaned)
+    res.json({ actions: Array.isArray(actions) ? actions.slice(0, 1) : [] })
   } catch {
     res.json({ actions: [] })
   }
