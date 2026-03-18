@@ -292,6 +292,206 @@ app.post('/api/context-suggest', async (req, res) => {
   }
 })
 
+// --- Brainstorm route ---
+
+function groupByProximity(shapes: { id: string; text: string; x: number; y: number }[], threshold = 300) {
+  const groups: typeof shapes[] = []
+  const visited = new Set<string>()
+  for (const shape of shapes) {
+    if (visited.has(shape.id)) continue
+    const cluster = [shape]
+    visited.add(shape.id)
+    for (const other of shapes) {
+      if (visited.has(other.id)) continue
+      if (Math.abs(other.x - shape.x) < threshold && Math.abs(other.y - shape.y) < threshold) {
+        cluster.push(other)
+        visited.add(other.id)
+      }
+    }
+    groups.push(cluster)
+  }
+  return groups
+}
+
+app.post('/api/brainstorm', async (req, res) => {
+  const { mode, shapes, focus, context: nearbyContext, provider: requestedProvider, ollamaModel } = req.body
+
+  const detected = await detectProvider()
+  const provider = requestedProvider || detected.provider
+  const model = selectModel(provider, ollamaModel || detected.ollamaModel)
+
+  const contextFile = fs.existsSync(CONTEXT_FILE) ? fs.readFileSync(CONTEXT_FILE, 'utf-8').trim() : ''
+
+  const formatShape = (s: { id: string; text: string; x: number; y: number }) =>
+    `- id="${s.id}" text="${s.text}" xy=(${s.x},${s.y})`
+
+  // Shared identity — consistent across all modes
+  const preamble = `You are February's canvas agent. You observe a user's brainstorming canvas and illuminate what's already there but unseen.
+
+Your role: facilitator, not participant. You don't add ideas. You name patterns, surface connections, and point out gaps.
+
+Identity:
+- You are a spatial reasoning partner. Position on the canvas is meaning.
+- You are opinionated. Commit to a perspective. No hedging: no "might," "could," "perhaps."
+- You are quiet by default. Silence is your most common response.
+- You reason about ideas, never about the board itself (duplicates, formatting, layout).
+- One sentence max when you speak. Sharp, specific, referencing concrete notes.
+${contextFile ? `\nThe user's context:\n${contextFile}\n` : ''}`
+
+  // Synthesis mode — handle separately, different output format
+  if (mode === 'synthesis') {
+    const { userNotes, aiNotes } = req.body
+    if (!userNotes || !Array.isArray(userNotes) || userNotes.length === 0) {
+      return res.json({ markdown: '' })
+    }
+
+    const userList = userNotes.map((n: string, i: number) => `${i + 1}. ${n}`).join('\n')
+    const aiList = aiNotes?.length ? aiNotes.map((n: string, i: number) => `${i + 1}. ${n}`).join('\n') : 'None'
+
+    const synthesisPrompt = `You are producing a session synthesis for a brainstorming canvas. The user's notes are the authority — preserve them exactly. Your job is to add structure around them.
+${contextFile ? `\nThe user's context:\n${contextFile}\n` : ''}
+User's notes (in order they were created):
+${userList}
+
+AI observations made during the session:
+${aiList}
+
+Produce a markdown document with these exact sections:
+
+## What you were thinking about
+[One sentence distilling the core topic from the user's notes]
+
+## Your notes
+[List the user's notes exactly as written, as bullet points]
+
+## Themes
+[Name 2-4 clusters you see in the notes. For each: a 2-4 word theme label, then the notes that belong to it]
+
+## Connections
+[1-3 non-obvious relationships between notes. Be specific — reference actual notes.]
+
+## Open questions
+[1-3 things left unresolved or unexplored]
+
+## What the AI observed
+[Summarise the AI's contributions during the session in 2-3 sentences — contextualised, not a raw list]
+
+Rules:
+- Never modify the user's notes. Quote them exactly.
+- Themes should be 2-4 words, not sentences.
+- If there aren't enough notes for meaningful themes, skip that section.
+
+Return ONLY the markdown. No explanation, no code fences.`
+
+    try {
+      const result = await generateText({ model, prompt: synthesisPrompt, temperature: 0.5 })
+      return res.json({ markdown: result.text })
+    } catch {
+      return res.json({ markdown: '' })
+    }
+  }
+
+  let prompt: string
+
+  if (mode === 'reactive') {
+    if (!focus || !Array.isArray(focus) || focus.length === 0) {
+      return res.json({ actions: [] })
+    }
+    const focusText = focus.map(formatShape).join('\n')
+    const nearbyText = nearbyContext?.length ? `\nNearby notes:\n${nearbyContext.map(formatShape).join('\n')}` : '\nNearby notes: None'
+
+    prompt = `${preamble}
+Mode: A new note was just added.
+
+New note:
+${focusText}
+${nearbyText}
+
+If this note is self-explanatory or too early to reason about, return [].
+
+Examples:
+
+User added: "Need offline mode" near "PWA support", "Local storage"
+[{"type":"note","near":"shape:abc","text":"These three define the offline architecture — that's a buildable scope."}]
+
+User added: "Budget: $40k" with no nearby notes
+[{"type":"note","near":"shape:def","text":"First constraint on the board. Everything above changes shape now."}]
+
+User added: "Use React" near "Vue considered", "Angular tried"
+[{"type":"question","near":"shape:xyz","text":"Three frameworks explored — what made you keep coming back to React?"}]
+
+User added: "Dark mode" with no nearby notes
+[]
+
+User added: "Users drop off at checkout" near "3-step form", "No guest checkout"
+[{"type":"question","near":"shape:ghi","text":"Is the 3-step form the bottleneck, or is it the missing guest option?"}]
+
+Return ONLY a JSON array. No explanation.`
+  } else {
+    if (!shapes || !Array.isArray(shapes) || shapes.length === 0) {
+      return res.json({ actions: [] })
+    }
+
+    const clusters = groupByProximity(shapes)
+    let canvasState = ''
+    let clusterIndex = 0
+    for (const cluster of clusters) {
+      if (cluster.length >= 3) {
+        const avgX = Math.round(cluster.reduce((s, c) => s + c.x, 0) / cluster.length)
+        const avgY = Math.round(cluster.reduce((s, c) => s + c.y, 0) / cluster.length)
+        canvasState += `\nCluster ${String.fromCharCode(65 + clusterIndex)} (${cluster.length} notes, near ${avgX},${avgY}):\n`
+        canvasState += cluster.map(formatShape).join('\n')
+        clusterIndex++
+      } else if (cluster.length === 2) {
+        canvasState += `\nPair (near ${cluster[0].x},${cluster[0].y}):\n`
+        canvasState += cluster.map(formatShape).join('\n')
+      } else {
+        canvasState += `\nIsolated:\n${formatShape(cluster[0])}`
+      }
+    }
+
+    prompt = `${preamble}
+Mode: The user has paused. Observe the full board.
+
+Canvas state (grouped by spatial proximity):
+${canvasState}
+
+Response priority (pick the FIRST that applies):
+1. An unnamed cluster exists (3+ related notes grouped together) → Name the theme (2-4 words, the essence)
+2. Two distant notes are connected but the user hasn't linked them → Surface the connection
+3. A clear gap exists in an otherwise complete cluster → Point it out
+4. Nothing non-obvious → Return []
+
+Examples:
+
+Canvas has 3 notes clustered: "Silent Git commits", "Auto-save", "Version history"
+[{"type":"cluster-name","near":["shape:a","shape:b","shape:c"],"text":"Invisible versioning"}]
+
+Canvas has "User onboarding" far from "Churn analysis" — both about retention
+[{"type":"note","near":"shape:d","text":"Onboarding and churn are the same problem from opposite ends."}]
+
+Canvas has 2 notes: "Use TypeScript", "Add linting"
+[]
+
+Canvas has 5 scattered unrelated notes, no clusters
+[]
+
+Canvas has cluster "Auth flow" (login, signup, reset) but no mention of sessions
+[{"type":"question","near":"shape:e","text":"Auth flow is complete except session management — intentional?"}]
+
+Return ONLY a JSON array. No explanation.`
+  }
+
+  try {
+    const result = await generateText({ model, prompt, temperature: 0.7, topP: 0.9 })
+    const cleaned = result.text.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim()
+    const actions = cleaned === '[]' ? [] : JSON.parse(cleaned)
+    res.json({ actions: Array.isArray(actions) ? actions.slice(0, 1) : [] })
+  } catch {
+    res.json({ actions: [] })
+  }
+})
+
 // --- Improve route ---
 
 app.post('/api/improve', async (req, res) => {
