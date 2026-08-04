@@ -15,6 +15,10 @@ const CONTENT_DIR = path.join(ROOT, 'content')
 const CONTEXT_FILE = path.join(CONTENT_DIR, 'CONTEXT.md')
 const ENV_FILE = path.join(ROOT, '.env')
 
+// Cap output tokens: without this, providers like OpenRouter reserve the
+// model's full maximum (65k+) and reject requests the credit balance can't cover.
+const MAX_OUTPUT_TOKENS = 8192
+
 const CONTEXT_TEMPLATE = `# Context
 
 ## What this is
@@ -89,6 +93,10 @@ function writeEnvKey(provider: string, key: string) {
     : provider === 'openai'
     ? 'OPENAI_API_KEY'
     : 'OPENROUTER_API_KEY'
+  writeEnvVar(varName, key)
+}
+
+function writeEnvVar(varName: string, key: string) {
   let contents = fs.existsSync(ENV_FILE) ? fs.readFileSync(ENV_FILE, 'utf-8') : ''
   const regex = new RegExp(`^${varName}=.*$`, 'm')
   if (regex.test(contents)) {
@@ -119,7 +127,7 @@ function selectModel(requestedProvider: string, ollamaModel?: string) {
   }
   if (requestedProvider === 'openrouter') {
     const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY ?? '' })
-    return openrouter('openrouter/auto')
+    return openrouter(process.env.OPENROUTER_MODEL || 'openrouter/auto')
   }
   const useAnthropic = requestedProvider === 'anthropic'
     ? !!process.env.ANTHROPIC_API_KEY
@@ -211,7 +219,28 @@ app.get('/api/keys', async (_req, res) => {
   const hasOpenRouter = !!process.env.OPENROUTER_API_KEY
   const ollama = await detectOllama()
   const provider = hasOpenRouter ? 'openrouter' : hasAnthropic ? 'anthropic' : hasOpenAI ? 'openai' : null
-  res.json({ hasKey: !!provider, provider, hasAnthropic, hasOpenAI, hasOpenRouter, hasOllama: ollama.available, ollamaModels: ollama.models })
+  res.json({ hasKey: !!provider, provider, hasAnthropic, hasOpenAI, hasOpenRouter, hasOllama: ollama.available, ollamaModels: ollama.models, openrouterModel: process.env.OPENROUTER_MODEL || 'openrouter/auto' })
+})
+
+app.post('/api/openrouter-model', (req, res) => {
+  const model: string = (req.body.model ?? '').trim()
+  writeEnvVar('OPENROUTER_MODEL', model)
+  res.json({ model: model || 'openrouter/auto' })
+})
+
+app.get('/api/openrouter-models', async (_req, res) => {
+  try {
+    const r = await fetch('https://openrouter.ai/api/v1/models')
+    const data = await r.json() as { data?: { id: string; pricing?: { prompt?: string; completion?: string } }[] }
+    const free = (data.data ?? [])
+      .filter(m => m.pricing?.prompt === '0' && m.pricing?.completion === '0')
+      .map(m => m.id)
+      .filter(id => id.endsWith(':free') || id === 'openrouter/free')
+      .sort()
+    res.json({ models: free })
+  } catch {
+    res.json({ models: [] })
+  }
 })
 
 app.post('/api/keys', (req, res) => {
@@ -258,7 +287,7 @@ app.post('/api/chat', async (req, res) => {
   const model = selectModel(requestedProvider, ollamaModel)
 
   try {
-    const result = streamText({ model, system, messages })
+    const result = streamText({ model, system, messages, maxOutputTokens: MAX_OUTPUT_TOKENS })
     res.setHeader('Content-Type', 'text/plain; charset=utf-8')
     res.setHeader('Transfer-Encoding', 'chunked')
     for await (const chunk of result.textStream) {
@@ -285,7 +314,7 @@ app.post('/api/context-suggest', async (req, res) => {
   const prompt = `Here is the user's current CONTEXT.md:\n\n${current}\n\n---\n\nHere is a recent conversation:\n\n${conversationText}\n\n---\n\nRewrite CONTEXT.md to accurately represent where this person is right now. Supersede decisions that have evolved, remove what is no longer current, update what has changed. Do not just append new information — replace old information with new where relevant. The file should read as a sharp, present-tense document, not a growing transcript. Return only the full updated file content — no explanation, no markdown wrapper, no code fences.`
 
   try {
-    const result = await generateText({ model, prompt })
+    const result = await generateText({ model, prompt, maxOutputTokens: MAX_OUTPUT_TOKENS })
     res.json({ current, suggested: result.text })
   } catch {
     res.status(500).json({ error: 'AI request failed' })
@@ -384,7 +413,7 @@ Rules:
 Return ONLY the markdown. No explanation, no code fences.`
 
     try {
-      const result = await generateText({ model, prompt: synthesisPrompt, temperature: 0.5 })
+      const result = await generateText({ model, prompt: synthesisPrompt, temperature: 0.5, maxOutputTokens: MAX_OUTPUT_TOKENS })
       return res.json({ markdown: result.text })
     } catch {
       return res.json({ markdown: '' })
@@ -483,7 +512,7 @@ Return ONLY a JSON array. No explanation.`
   }
 
   try {
-    const result = await generateText({ model, prompt, temperature: 0.7, topP: 0.9 })
+    const result = await generateText({ model, prompt, temperature: 0.7, topP: 0.9, maxOutputTokens: MAX_OUTPUT_TOKENS })
     const cleaned = result.text.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim()
     const actions = cleaned === '[]' ? [] : JSON.parse(cleaned)
     res.json({ actions: Array.isArray(actions) ? actions.slice(0, 1) : [] })
@@ -507,7 +536,7 @@ app.post('/api/improve', async (req, res) => {
   const prompt = `You are a copy editor, not a rewriter. Fix spelling, grammar, and clarity in the following text. Preserve the author's voice and intent. Preserve the original formatting including line breaks, lists, and structure. Do not add or remove ideas. Do not wrap in quotes or code fences. Return only the improved text.${contextSection}\n\nText to improve:\n${text}`
 
   try {
-    const result = await generateText({ model, prompt })
+    const result = await generateText({ model, prompt, maxOutputTokens: MAX_OUTPUT_TOKENS })
     res.json({ improved: result.text })
   } catch {
     res.status(500).json({ error: 'AI request failed' })

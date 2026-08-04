@@ -53,6 +53,9 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
   const [ollamaModels, setOllamaModels] = useState<string[]>([])
   const [provider, setProvider] = useState<'anthropic' | 'openai' | 'ollama' | 'openrouter'>('openrouter')
   const [hasOpenRouter, setHasOpenRouter] = useState(false)
+  const [openrouterModel, setOpenrouterModel] = useState('openrouter/auto')
+  const [openrouterModels, setOpenrouterModels] = useState<string[]>([])
+  const [modelQuery, setModelQuery] = useState<string | null>(null)
   const [keyInput, setKeyInput] = useState('')
   const [showProviderMenu, setShowProviderMenu] = useState(false)
   const [addingFor, setAddingFor] = useState<'anthropic' | 'openai' | 'openrouter' | null>(null)
@@ -84,6 +87,7 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
         setHasOpenRouter(d.hasOpenRouter ?? false)
         setHasOllama(d.hasOllama ?? false)
         setOllamaModels(d.ollamaModels ?? [])
+        if (d.openrouterModel) setOpenrouterModel(d.openrouterModel)
         if (d.provider) setProvider(d.provider)
         else if (d.hasOllama) setProvider('ollama')
       })
@@ -119,6 +123,24 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
     if (showProviderMenu) document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showProviderMenu])
+
+  useEffect(() => {
+    if (showProviderMenu && hasOpenRouter && openrouterModels.length === 0) {
+      fetch('/api/openrouter-models')
+        .then(r => r.json())
+        .then(d => setOpenrouterModels(d.models ?? []))
+    }
+  }, [showProviderMenu, hasOpenRouter, openrouterModels.length])
+
+  async function saveOpenrouterModel(value: string) {
+    const model = value.trim()
+    setOpenrouterModel(model || 'openrouter/auto')
+    await fetch('/api/openrouter-model', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model }),
+    })
+  }
 
   function adjustTextareaHeight() {
     const el = textareaRef.current
@@ -449,10 +471,51 @@ export default function AIPanel({ open, onClose, panelWidth, onDragStart, onExpa
               </button>
             </form>
           ) : provider === 'openrouter' ? (
-            <div className="flex items-stretch border-b border-neutral-200 dark:border-neutral-800 last:border-0">
-              <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent dark:border-accent-soft text-neutral-900 dark:text-neutral-100">OpenRouter</div>
-              <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
-                <button onClick={() => removeKey('openrouter')} className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">remove key</button>
+            <div className="flex flex-col border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+              <div className="flex items-stretch">
+                <div className="flex-1 flex items-center px-4 py-2.5 text-sm border-l-2 border-accent dark:border-accent-soft text-neutral-900 dark:text-neutral-100">OpenRouter</div>
+                <div className="w-28 border-l border-neutral-200 dark:border-neutral-800 flex items-center px-3">
+                  <button onClick={() => removeKey('openrouter')} className="text-xs text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">remove key</button>
+                </div>
+              </div>
+              <div className="px-4 pb-2.5 border-l-2 border-accent dark:border-accent-soft relative">
+                <input
+                  value={modelQuery ?? openrouterModel}
+                  onFocus={e => { setModelQuery(openrouterModel); e.target.select() }}
+                  onChange={e => setModelQuery(e.target.value)}
+                  onBlur={e => {
+                    if (modelQuery !== null && modelQuery.trim() !== openrouterModel) saveOpenrouterModel(e.target.value)
+                    setModelQuery(null)
+                  }}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur() }}
+                  placeholder="openrouter/auto"
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded px-2 py-1.5 text-xs font-mono text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-neutral-500"
+                />
+                {modelQuery !== null && openrouterModels.length > 0 && (() => {
+                  const q = modelQuery.trim().toLowerCase()
+                  const shown = q === '' || q === openrouterModel.toLowerCase()
+                    ? openrouterModels
+                    : openrouterModels.filter(m => m.toLowerCase().includes(q))
+                  return (
+                    <div className="absolute left-4 right-0 top-full -mt-1 z-20 max-h-56 overflow-y-auto bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded shadow-lg">
+                      {shown.length === 0 ? (
+                        <div className="px-2 py-1.5 text-xs text-neutral-400 dark:text-neutral-600">No matches — press Enter to use as-is</div>
+                      ) : shown.map(m => (
+                        <button
+                          key={m}
+                          onMouseDown={e => { e.preventDefault(); saveOpenrouterModel(m); setModelQuery(null) }}
+                          className={`block w-full text-left px-2 py-1.5 text-xs font-mono transition-colors ${
+                            m === openrouterModel
+                              ? 'text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-800'
+                              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           ) : hasOpenRouter ? (
