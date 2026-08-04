@@ -13,5 +13,8 @@ content/
 # Build output
 dist/
 
+# Personal Claude context — stays local
+CLAUDE.local.md
+
 # System
 .DS_Store
